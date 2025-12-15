@@ -259,7 +259,7 @@
     </nav>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzvZ-UYgNaQiCiQ0691aEl-Blp4jkRJyEeoGjg9okFFedpGPvMhVssuf4dutVZwjLpg/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx3HuCbrDGjjsCjfhxzjyLbcer27s057zQKmexH_AZKNeSklxbb2OzaKKIPbb0bQzRr/exec'; 
         let currentUser = null;
 
         function checkAuthAndSwitch(pageId) {
@@ -348,17 +348,22 @@
         function handleRegister(e) {
             e.preventDefault();
             toggleLoading(true);
-            const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
+            const data = new FormData(e.target);
+            data.append('action', 'register');
             
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'no-cors',
-                body: new URLSearchParams(data) 
+                body: data,
             })
-            .then(() => {
+            .then(res => res.json())
+            .then(data => {
                 toggleLoading(false);
-                alert('註冊請求已送出！請嘗試登入。');
-                toggleAuthMode('login');
+                if (data.status === 'success') {
+                    alert('註冊成功！請使用您的新帳號登入。');
+                    toggleAuthMode('login');
+                } else {
+                    alert('註冊失敗：' + (data.message || '未知錯誤'));
+                }
             })
             .catch(err => { 
                 toggleLoading(false); 
@@ -418,32 +423,50 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
-            const reportData = {
-                action: 'report',
-                reporter: currentUser.username,
-                location: document.getElementById('report-location').value,
-                date: document.getElementById('report-date').value,
-                time: document.getElementById('report-time').value,
-                desc: document.getElementById('report-desc').value,
-                imageBase64: document.getElementById('report-img-base64').value,
-                note: "圖片已上傳" 
-            };
-
+            const formData = new FormData();
+            formData.append('action', 'report');
+            formData.append('reporter', currentUser.username);
+            formData.append('location', document.getElementById('report-location').value);
+            formData.append('date', document.getElementById('report-date').value);
+            formData.append('time', document.getElementById('report-time').value);
+            formData.append('desc', document.getElementById('report-desc').value);
+            
+            const file = document.getElementById('report-file').files[0];
+            if (file) {
+                 const reader = new FileReader();
+                 reader.onload = function(e) {
+                    const imageBase64 = e.target.result.split(',')[1];
+                    formData.append('imageBase64', imageBase64);
+                    sendReportData(formData);
+                 }
+                 reader.readAsDataURL(file);
+            } else {
+                 sendReportData(formData);
+            }
+        }
+        
+        function sendReportData(formData) {
             toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
-                mode: 'no-cors',
-                body: new URLSearchParams(reportData) 
+                body: formData,
             })
-            .then(() => { 
+            .then(res => res.json())
+            .then(data => { 
                 toggleLoading(false); 
-                const tempCaseId = 'R-' + Date.now().toString().slice(-6);
-                document.getElementById('success-case-id').innerText = tempCaseId;
-                alert('通報請求已送出！後端將進行處理。');
-                switchTab('success');
-                resetReportForm();
+                if (data.status === 'success' && data.id) {
+                    document.getElementById('success-case-id').innerText = data.id;
+                    alert('通報成功！案件編號：' + data.id);
+                    switchTab('success');
+                    resetReportForm();
+                } else {
+                    alert('通報失敗：' + (data.message || '後端處理錯誤'));
+                }
             })
-            .catch(err => { toggleLoading(false); alert('通報時發生錯誤：' + err); });
+            .catch(err => { 
+                toggleLoading(false); 
+                alert('通報時發生連線錯誤：' + err); 
+            });
         }
 
         function loadReports() {
@@ -470,7 +493,7 @@
                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
                     const html = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border-border-gray-100 hover:shadow-md transition">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
