@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>路見不平 - 通報與處理系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            /* 繽紛漸層背景 */
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            background-attachment: fixed;
+        }
+
+        /* 繽紛背景類別 (用於特定區塊) */
+        .bg-colorful {
+            background: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+        }
+        
+        .bg-colorful-warm {
+            background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
+        }
+
+        .page-section { display: none; animation: fadeIn 0.4s ease-out; }
+        .page-section.active { display: block; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .main-container {
+            padding-top: 80px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 登入頁籤切換樣式 */
+        .auth-tab {
+            cursor: pointer;
+            padding: 10px 0;
+            flex: 1;
+            text-align: center;
+            font-weight: bold;
+            color: #9ca3af;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .auth-tab.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        
+        /* 自定義卡片陰影 */
+        .card-shadow {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        #loading-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 9999;
+            justify-content: center; align-items: center;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <!-- 讀取動畫 -->
+    <div id="loading-overlay">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-500 mb-4 mx-auto"></div>
+            <p class="font-bold text-gray-600 text-lg">系統處理中...</p>
+        </div>
+    </div>
+
+    <!-- 電腦版導覽列 -->
+    <header id="desktop-nav" class="hidden md:flex fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50 px-8 py-4 justify-between items-center transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-r from-blue-500 to-cyan-400 text-white p-2 rounded-xl shadow-md transform rotate-3 hover:rotate-0 transition duration-300">
+                <i class="fas fa-road fa-lg"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">路見不平</h1>
+        </div>
+        <nav class="flex gap-8 text-gray-500 font-medium">
+            <a href="#" onclick="switchTab('home')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-home opacity-50"></i>首頁</a>
+            <a href="#" onclick="switchTab('report')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-bullhorn opacity-50"></i>通報</a>
+            <a href="#" onclick="switchTab('status')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-list-ul opacity-50"></i>進度</a>
+            <a href="#" onclick="switchTab('profile')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-user opacity-50"></i>個人</a>
+        </nav>
+        <button onclick="logout()" class="text-sm border-2 border-red-400 text-red-500 px-5 py-1.5 rounded-full hover:bg-red-500 hover:text-white transition duration-300 font-bold">
+            登出
+        </button>
+    </header>
+
+    <!-- 主內容區 -->
+    <main class="main-container p-4">
+
+        <!-- 1. 登入/註冊整合頁面 -->
+        <section id="page-auth" class="page-section active h-full flex flex-col items-center justify-center pt-10" style="min-height: 80vh;">
+            
+            <div class="bg-white p-8 rounded-[2rem] card-shadow w-full max-w-md relative overflow-hidden">
+                <!-- 頂部裝飾條 -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"></div>
+
+                <h2 class="text-3xl font-bold text-center mb-2 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400">路見不平通報</h2>
+                <p class="text-center text-gray-400 text-sm mb-8">共同維護美好的城市道路</p>
+
+                <!-- 頁籤切換 -->
+                <div class="flex border-b border-gray-100 mb-6">
+                    <div id="tab-login" class="auth-tab active" onclick="toggleAuthMode('login')">帳號登入</div>
+                    <div id="tab-register" class="auth-tab" onclick="toggleAuthMode('register')">註冊帳號</div>
+                </div>
+                
+                <!-- 登入表單 -->
+                <form id="form-login" onsubmit="handleLogin(event)" class="space-y-5 block animate-fade-in">
+                    <div class="relative group">
+                        <i class="fas fa-user absolute left-4 top-4 text-gray-300 group-focus-within:text-blue-500 transition"></i>
+                        <input type="text" id="login-username" placeholder="請輸入帳號" required 
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition duration-300">
+                    </div>
+                    <div class="relative group">
+                        <i class="fas fa-lock absolute left-4 top-4 text-gray-300 group-focus-within:text-blue-500 transition"></i>
+                        <input type="password" id="login-password" placeholder="請輸入密碼" required 
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition duration-300">
+                    </div>
+                    
+                    <div class="flex justify-end text-xs text-blue-500 px-1">
+                        <a href="#" class="hover:text-blue-700 transition">忘記密碼？</a>
+                    </div>
+
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-3.5 rounded-xl hover:shadow-lg hover:from-blue-600 hover:to-blue-700 transition transform hover:-translate-y-0.5">
+                        立即登入
+                    </button>
+                </form>
+
+                <!-- 註冊表單 (預設隱藏) -->
+                <form id="form-register" onsubmit="handleRegister(event)" class="space-y-5 hidden animate-fade-in">
+                    <div class="relative group">
+                        <i class="fas fa-envelope absolute left-4 top-4 text-gray-300 group-focus-within:text-green-500 transition"></i>
+                        <input type="text" id="reg-username" placeholder="設定帳號 (Email)" required 
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-green-200 focus:border-green-400 outline-none transition duration-300">
+                    </div>
+                    <div class="relative group">
+                        <i class="fas fa-smile absolute left-4 top-4 text-gray-300 group-focus-within:text-green-500 transition"></i>
+                        <input type="text" id="reg-name" placeholder="您的稱呼 (暱稱)" required 
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-green-200 focus:border-green-400 outline-none transition duration-300">
+                    </div>
+                    <div class="relative group">
+                        <i class="fas fa-key absolute left-4 top-4 text-gray-300 group-focus-within:text-green-500 transition"></i>
+                        <input type="password" id="reg-password" placeholder="設定密碼" required 
+                            class="w-full bg-gray-50 border border-gray-100 rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-green-200 focus:border-green-400 outline-none transition duration-300">
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-gradient-to-r from-green-400 to-teal-500 text-white font-bold py-3.5 rounded-xl hover:shadow-lg hover:from-green-500 hover:to-teal-600 transition transform hover:-translate-y-0.5">
+                        確認註冊
+                    </button>
+                </form>
+
+            </div>
+            
+            <p class="mt-6 text-sm text-gray-500 bg-white/50 px-4 py-2 rounded-full backdrop-blur-sm">
+                <i class="fas fa-info-circle text-blue-400 mr-1"></i> 請先登入系統後再進行通報
+            </p>
+        </section>
+
+        <!-- 2. 首頁 Dashboard -->
+        <section id="page-home" class="page-section">
+            <div class="max-w-4xl mx-auto mt-4">
+                <!-- 歡迎卡片 -->
+                <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-8 text-white mb-8 shadow-xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
+                    <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-5 -mb-5"></div>
+                    
+                    <h2 class="text-3xl font-bold mb-2">早安，<span id="display-name">訪客</span> 👋</h2>
+                    <p class="opacity-90 text-lg">今天發現了什麼需要改善的地方嗎？</p>
+                </div>
+
+                <!-- 功能按鈕 -->
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <button onclick="switchTab('report')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-blue-100">
+                        <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500 group-hover:text-white transition duration-300">
+                            <i class="fas fa-plus text-2xl"></i>
+                        </div>
+                        <span class="font-bold text-lg text-gray-700 group-hover:text-blue-600">通報事件</span>
+                        <p class="text-xs text-gray-400 mt-2">發現坑洞、路燈故障</p>
+                    </button>
+                    <button onclick="switchTab('status')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-purple-100">
+                        <div class="w-16 h-16 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500 group-hover:text-white transition duration-300">
+                            <i class="fas fa-search text-2xl"></i>
+                        </div>
+                        <span class="font-bold text-lg text-gray-700 group-hover:text-purple-600">查看進度</span>
+                        <p class="text-xs text-gray-400 mt-2">追蹤案件處理狀態</p>
+                    </button>
+                </div>
+
+                <!-- 最近動態 (裝飾) -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <i class="fas fa-bell text-yellow-400 mr-2"></i> 系統公告
+                    </h3>
+                    <div class="text-sm text-gray-500 space-y-2">
+                        <p>🎉 系統升級：新增圖片連結備註功能！</p>
+                        <p>📢 提醒：請勿上傳無關照片，謝謝配合。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. 事件通報頁面 -->
+        <section id="page-report" class="page-section">
+            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden mt-4 border border-gray-100">
+                <div class="p-6 bg-gradient-to-r from-blue-50 to-white border-b border-gray-100">
+                    <h2 class="text-xl font-bold text-blue-800 flex items-center justify-center">
+                        <span class="bg-blue-100 p-2 rounded-lg mr-2"><i class="fas fa-edit text-blue-600"></i></span>
+                        填寫通報資料
+                    </h2>
+                </div>
+                
+                <div class="p-8 space-y-6">
+                    <!-- 地點 -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📍 發生地點</label>
+                        <input type="text" id="report-location" placeholder="請輸入地址或描述位置" 
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition">
+                    </div>
+
+                    <!-- 日期時間 -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📅 日期</label>
+                            <input type="date" id="report-date" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">🕒 時間</label>
+                            <input type="time" id="report-time" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition">
+                        </div>
+                    </div>
+
+                    <!-- 描述 -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📝 詳細描述</label>
+                        <textarea id="report-desc" rows="4" 
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition" 
+                            placeholder="請詳細描述問題狀況..."></textarea>
+                    </div>
+
+                    <!-- 備註 -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📎 連結或備註</label>
+                        <input type="text" id="report-img-note" placeholder="例如：圖片網址" 
+                            class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition">
+                    </div>
+                </div>
+
+                <div class="p-6 bg-gray-50 flex gap-4">
+                    <button onclick="switchTab('home')" class="flex-1 bg-white border border-gray-300 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 transition">取消</button>
+                    <button onclick="submitReport()" class="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:shadow-xl hover:from-blue-600 hover:to-indigo-700 transition transform hover:-translate-y-0.5">
+                        <i class="fas fa-paper-plane mr-2"></i>送出通報
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. 案件進度 -->
+        <section id="page-status" class="page-section">
+            <div class="max-w-2xl mx-auto mt-4">
+                <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="font-bold text-xl text-gray-800">案件列表</h2>
+                        <button onclick="loadReports()" class="text-blue-500 bg-blue-50 px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-blue-100 transition">
+                            <i class="fas fa-sync-alt mr-1"></i>重新整理
+                        </button>
+                    </div>
+                    
+                    <div id="status-list" class="space-y-4">
+                        <div class="text-center py-12">
+                            <div class="text-gray-300 text-6xl mb-4"><i class="fas fa-inbox"></i></div>
+                            <p class="text-gray-400">目前沒有資料，或請點擊重新整理</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. 個人中心 -->
+        <section id="page-profile" class="page-section">
+            <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl mt-8 p-8 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-400 to-purple-500"></div>
+                
+                <div class="relative text-center mt-4">
+                    <div class="w-24 h-24 bg-white p-1 rounded-full mx-auto shadow-lg">
+                        <div class="w-full h-full bg-gray-100 rounded-full flex items-center justify-center text-4xl text-gray-400 overflow-hidden">
+                             <!-- 隨機頭像 -->
+                             <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" class="w-full h-full">
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-2xl mt-4 mb-1 text-gray-800" id="profile-name">小明</h3>
+                    <span class="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold">已認證會員</span>
+                </div>
+
+                <div class="mt-8 space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-xl flex items-center">
+                        <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm mr-4">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-400">登入帳號</p>
+                            <p class="font-medium text-gray-700" id="profile-account">user123</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <button onclick="logout()" class="w-full border-2 border-red-100 text-red-400 py-3 rounded-xl font-bold hover:bg-red-50 hover:text-red-500 transition">
+                        登出帳號
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 手機版底部導覽列 -->
+    <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around py-3 z-50 pb-safe">
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition">
+            <i class="fas fa-home mb-1 text-lg"></i><span class="text-[10px] font-bold">首頁</span>
+        </button>
+        <button onclick="switchTab('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition">
+            <i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="text-[10px] font-bold">列表</span>
+        </button>
+        <button onclick="switchTab('report')" class="nav-btn flex flex-col items-center w-16 -mt-8">
+            <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50">
+                <i class="fas fa-plus text-xl transform -rotate-45"></i>
+            </div>
+        </button>
+        <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition">
+            <i class="fas fa-user mb-1 text-lg"></i><span class="text-[10px] font-bold">個人</span>
+        </button>
+    </nav>
+
+    <script>
+        // ==========================================
+        //  設定區：請填入您的 Google Apps Script 網址
+        // ==========================================
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec'; 
+
+        let currentUser = null;
+
+        // 切換登入/註冊模式
+        function toggleAuthMode(mode) {
+            const loginForm = document.getElementById('form-login');
+            const regForm = document.getElementById('form-register');
+            const loginTab = document.getElementById('tab-login');
+            const regTab = document.getElementById('tab-register');
+
+            if (mode === 'login') {
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+                loginTab.classList.add('active');
+                regTab.classList.remove('active');
+            } else {
+                loginForm.classList.add('hidden');
+                regForm.classList.remove('hidden');
+                loginTab.classList.remove('active');
+                regTab.classList.add('active');
+            }
+        }
+
+        // 頁面切換邏輯
+        function switchTab(pageId) {
+            // 隱藏所有頁面
+            document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+            // 顯示目標頁面
+            document.getElementById('page-' + (pageId === 'login' || pageId === 'register' ? 'auth' : pageId)).classList.add('active');
+
+            // 處理導覽列
+            const isAuthPage = (pageId === 'login' || pageId === 'register' || pageId === 'auth');
+            const desktopNav = document.getElementById('desktop-nav');
+            const mobileNav = document.getElementById('mobile-nav');
+
+            if (isAuthPage) {
+                if(desktopNav) desktopNav.classList.add('hidden');
+                if(mobileNav) mobileNav.style.display = 'none';
+            } else {
+                if(desktopNav) desktopNav.classList.remove('hidden');
+                if(mobileNav) mobileNav.style.display = 'flex';
+            }
+            
+            // 進入通報頁面時清空表單
+            if(pageId === 'report') {
+                resetReportForm();
+            }
+            
+            // 進入列表頁時載入資料
+            if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) {
+                loadReports();
+            }
+
+            window.scrollTo(0,0);
+        }
+
+        // 清空表單
+        function resetReportForm() {
+            document.getElementById('report-location').value = '';
+            document.getElementById('report-date').valueAsDate = new Date();
+            document.getElementById('report-time').value = new Date().toTimeString().slice(0,5);
+            document.getElementById('report-desc').value = '';
+            document.getElementById('report-img-note').value = '';
+        }
+
+        // Loading 控制
+        function toggleLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
+        // --- 註冊功能 ---
+        function handleRegister(e) {
+            e.preventDefault();
+            if(!GOOGLE_SCRIPT_URL.startsWith('http')) {
+                alert('請先在程式碼中設定 Google Apps Script 網址！');
+                return;
+            }
+
+            const data = {
+                action: 'register',
+                username: document.getElementById('reg-username').value,
+                name: document.getElementById('reg-name').value,
+                password: document.getElementById('reg-password').value
+            };
+
+            toggleLoading(true);
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            }).then(() => {
+                toggleLoading(false);
+                alert('註冊請求已送出！請嘗試登入。');
+                toggleAuthMode('login'); // 切換回登入
+            }).catch(err => {
+                toggleLoading(false);
+                alert('連線錯誤：' + err);
+            });
+        }
+
+        // --- 登入功能 ---
+        function handleLogin(e) {
+            e.preventDefault();
+            // 簡單的前端模擬登入
+            const username = document.getElementById('login-username').value;
+            currentUser = { username: username, name: username.split('@')[0] }; 
+            
+            // 更新 UI
+            document.getElementById('display-name').innerText = currentUser.name;
+            document.getElementById('profile-name').innerText = currentUser.name;
+            document.getElementById('profile-account').innerText = username;
+            
+            // 更新頭像 Seed (讓每次不同帳號有不同頭像)
+            const avatarImg = document.querySelector('#page-profile img');
+            if(avatarImg) avatarImg.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+
+            alert('登入成功！');
+            switchTab('home');
+        }
+
+        function logout() {
+            currentUser = null;
+            toggleAuthMode('login');
+            switchTab('auth');
+        }
+
+        // --- 送出通報 ---
+        function submitReport() {
+            if(!currentUser) { alert('請先登入'); return; }
+            if(!GOOGLE_SCRIPT_URL.startsWith('http')) {
+                alert('請先設定 Google Apps Script 網址！');
+                return;
+            }
+
+            const reportData = {
+                action: 'report',
+                reporter: currentUser.username,
+                location: document.getElementById('report-location').value,
+                date: document.getElementById('report-date').value,
+                time: document.getElementById('report-time').value,
+                desc: document.getElementById('report-desc').value,
+                note: document.getElementById('report-img-note').value
+            };
+
+            toggleLoading(true);
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reportData)
+            }).then(() => {
+                toggleLoading(false);
+                alert('✅ 通報成功！感謝您的協助。');
+                resetReportForm();
+                switchTab('home');
+            }).catch(err => {
+                toggleLoading(false);
+                alert('發生錯誤：' + err);
+            });
+        }
+
+        // --- 讀取列表 ---
+        function loadReports() {
+            if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
+
+            toggleLoading(true);
+            fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
+            .then(res => res.json())
+            .then(data => {
+                toggleLoading(false);
+                const list = document.getElementById('status-list');
+                list.innerHTML = '';
+                
+                if(!data || data.length === 0) {
+                    list.innerHTML = '<div class="text-center py-10 text-gray-400">目前沒有案件</div>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
+                    const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
+
+                    const html = `
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="flex items-center gap-2">
+                                <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
+                                <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                                    <i class="fas ${icon}"></i> ${item.status || '處理中'}
+                                </span>
+                            </div>
+                            <span class="text-xs text-gray-400">${item.date}</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
+                        <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
+                    </div>`;
+                    list.innerHTML += html; // 最新資料在下方，若要反序可改用 insertAdjacentHTML('afterbegin', html)
+                });
+            }).catch(err => {
+                toggleLoading(false);
+                console.error(err);
+            });
+        }
+
+        // 初始化
+        switchTab('auth');
+    </script>
+</body>
+</html>
