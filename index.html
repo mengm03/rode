@@ -312,7 +312,7 @@
                 document.getElementById('profile-account').innerText = currentUser.username;
                 document.getElementById('profile-status').className = 'bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold';
                 document.getElementById('profile-status').innerText = '已認證會員';
-                document.getElementById('profile-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`;
+                document.getElementById('profile-avatar').src = `https://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec=${currentUser.username}`;
             }
 
             window.scrollTo(0,0);
@@ -409,7 +409,7 @@
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
-            document.getElementById('profile-avatar').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest';
+            document.getElementById('profile-avatar').src = 'httpshttps://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec://api.dicebear.com/7.x/avataaars/svg?seed=guest';
             toggleAuthMode('login'); 
             switchTab('auth'); 
         }
