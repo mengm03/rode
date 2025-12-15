@@ -385,18 +385,36 @@
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                note: "圖片已上傳" 
+                note: "圖片已上傳",
+                status: "處理中" // 預設狀態
             };
+            
+            // 儲存到 localStorage
+            saveReportToLocalStorage(reportData);
+            
             toggleLoading(true);
+            // 嘗試送到後端，但無論成功或失敗都顯示成功頁面 (因為使用 no-cors 模式)
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reportData) })
-            .then(() => { 
+            .finally(() => { 
                 toggleLoading(false); 
                 // 切換到成功頁面
                 document.getElementById('success-case-id').innerText = caseId;
                 switchTab('success');
                 resetReportForm();
-            })
-            .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
+            });
+        }
+        
+        function saveReportToLocalStorage(reportData) {
+            // 從 localStorage 讀取現有通報紀錄
+            let reports = JSON.parse(localStorage.getItem('myReports') || '[]');
+            // 加入新通報
+            reports.push(reportData);
+            // 儲存回 localStorage
+            localStorage.setItem('myReports', JSON.stringify(reports));
+        }
+        
+        function getReportsFromLocalStorage() {
+            return JSON.parse(localStorage.getItem('myReports') || '[]');
         }
 
         function loadReports() {
@@ -436,34 +454,79 @@
         // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
-            if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
-            toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
-            .then(res => res.json())
-            .then(data => {
-                toggleLoading(false);
-                const list = document.getElementById('my-reports-list');
-                list.innerHTML = '';
-                
-                // 篩選本人案件
-                const myData = data.filter(item => item.reporter === currentUser.username || !item.reporter); // 若後端沒回傳 reporter 就無法篩，這邊先做個容錯
-                
-                if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
-                myData.forEach(item => {
-                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
-                     const html = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
-                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold">${item.status || '處理中'}</span>
-                        </div>
-                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
-                        <p class="text-sm text-gray-500">${item.desc}</p>
-                    </div>`;
-                    list.innerHTML += html;
+            const list = document.getElementById('my-reports-list');
+            list.innerHTML = '';
+            
+            // 先從 localStorage 讀取本地通報紀錄
+            const localReports = getReportsFromLocalStorage();
+            
+            // 篩選當前使用者的紀錄
+            const myLocalReports = localReports.filter(item => item.reporter === currentUser.username);
+            
+            // 如果有後端 URL，嘗試從後端載入（可選）
+            if(GOOGLE_SCRIPT_URL.startsWith('http')) {
+                toggleLoading(true);
+                fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
+                .then(res => res.json())
+                .then(data => {
+                    toggleLoading(false);
+                    // 篩選本人案件
+                    const myBackendData = data.filter(item => item.reporter === currentUser.username);
+                    
+                    // 合併本地和後端資料（去重）
+                    const allReports = [...myLocalReports];
+                    myBackendData.forEach(backendItem => {
+                        if (!allReports.find(local => local.id === backendItem.id)) {
+                            allReports.push(backendItem);
+                        }
+                    });
+                    
+                    displayMyReports(allReports);
+                })
+                .catch(err => { 
+                    toggleLoading(false); 
+                    console.error(err);
+                    // 如果後端失敗，只顯示本地資料
+                    displayMyReports(myLocalReports);
                 });
-            }).catch(err => { toggleLoading(false); console.error(err); });
+            } else {
+                // 沒有後端 URL，只顯示本地資料
+                displayMyReports(myLocalReports);
+            }
         }
+        
+        function displayMyReports(reports) {
+            const list = document.getElementById('my-reports-list');
+            list.innerHTML = '';
+            
+            if(!reports || reports.length === 0) { 
+                list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; 
+                return; 
+            }
+            
+            // 按日期排序（最新的在前）
+            reports.sort((a, b) => {
+                const dateA = new Date(a.date + ' ' + (a.time || '00:00'));
+                const dateB = new Date(b.date + ' ' + (b.time || '00:00'));
+                return dateB - dateA;
+            });
+            
+            reports.forEach(item => {
+                const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
+                const html = `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
+                        <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold">${item.status || '處理中'}</span>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
+                    <p class="text-sm text-gray-500">${item.desc}</p>
+                    <p class="text-xs text-gray-400 mt-2">📅 ${item.date} ${item.time || ''}</p>
+                </div>`;
+                list.innerHTML += html;
+            });
+        }
+
 
         switchTab('auth');
     </script>
