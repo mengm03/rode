@@ -44,6 +44,10 @@
         .img-preview-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #mobile-nav { z-index: 999; }
+        
+        /* 讓卡片有點擊感 */
+        .clickable-card { cursor: pointer; transition: all 0.2s; }
+        .clickable-card:active { transform: scale(0.98); background-color: #f8fafc; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -216,6 +220,50 @@
             </div>
         </section>
 
+        <!-- 新增：案件詳細內容頁面 -->
+        <section id="page-detail" class="page-section">
+             <div class="max-w-2xl mx-auto px-4">
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-6">
+                    <!-- 頂部狀態列 -->
+                    <div class="bg-gray-50 p-6 border-b border-gray-100 flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <button onclick="history.back() || switchTab('status')" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 hover:text-blue-600 shadow-sm transition"><i class="fas fa-arrow-left"></i></button>
+                            <div>
+                                <h3 class="font-bold text-gray-800 text-lg">案件詳情</h3>
+                                <p class="text-xs text-gray-400" id="detail-id">#R-000000</p>
+                            </div>
+                        </div>
+                        <span id="detail-status" class="bg-yellow-100 text-yellow-600 text-xs px-3 py-1.5 rounded-full font-bold">處理中</span>
+                    </div>
+
+                    <!-- 內容區 -->
+                    <div class="p-6 md:p-8 space-y-6">
+                        <!-- 圖片顯示區 -->
+                        <div class="w-full bg-gray-100 rounded-2xl overflow-hidden relative group">
+                             <img id="detail-image" src="" alt="案件照片" class="w-full h-64 md:h-80 object-cover hidden">
+                             <div id="detail-no-image" class="h-40 flex items-center justify-center text-gray-400 flex-col"><i class="fas fa-image text-4xl mb-2"></i><span class="text-sm">未提供照片</span></div>
+                        </div>
+
+                        <!-- 資訊列表 -->
+                        <div class="space-y-4">
+                             <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0"><i class="fas fa-map-marker-alt"></i></div>
+                                <div><p class="text-xs text-gray-400 font-bold mb-0.5">發生地點</p><p class="text-gray-800 font-medium text-lg" id="detail-location">--</p></div>
+                             </div>
+                             <div class="flex items-start gap-4">
+                                <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 shrink-0"><i class="fas fa-clock"></i></div>
+                                <div><p class="text-xs text-gray-400 font-bold mb-0.5">發生時間</p><p class="text-gray-800 font-medium" id="detail-datetime">--</p></div>
+                             </div>
+                             <div class="bg-gray-50 p-5 rounded-2xl">
+                                <p class="text-xs text-gray-400 font-bold mb-2 flex items-center gap-2"><i class="fas fa-align-left"></i> 詳細描述</p>
+                                <p class="text-gray-700 leading-relaxed" id="detail-desc">--</p>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+             </div>
+        </section>
+
         <!-- 5. 個人中心 -->
         <section id="page-profile" class="page-section">
             <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl mt-8 p-8 relative overflow-hidden mx-4">
@@ -259,8 +307,10 @@
     </nav>
 
     <script>
+        // 注意：請確保這裡是您最新的部署網址
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMKpm4vGdtvrx2F_DXFhWNRhRn0wyt_D5liM75y25x2OxycUqt8XmtTliYaDimkOtXIA/exec'; 
         let currentUser = null;
+        let allReportsCache = []; // 用來暫存資料，方便詳細頁面讀取
 
         function checkAuthAndSwitch(pageId) {
             if (!currentUser) {
@@ -304,7 +354,7 @@
             }
             
             if(pageId === 'report') resetReportForm();
-            if(pageId === 'status') loadReports(); // Use default param here
+            if(pageId === 'status') loadReports();
             
             if(pageId === 'profile' && currentUser) {
                 document.getElementById('profile-name').innerText = currentUser.name;
@@ -349,11 +399,9 @@
             toggleLoading(true);
             const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
             
-            // Corrected: Use URLSearchParams for POST body to match GAS requirement
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                // Removed headers: { 'Content-Type': 'application/json' },
                 body: new URLSearchParams(data) 
             })
             .then(() => { toggleLoading(false); alert('註冊請求已送出！請嘗試登入。'); toggleAuthMode('login'); })
@@ -381,32 +429,28 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
-            // 產生一個前端的案件編號
             const caseId = 'R-' + Date.now().toString().slice(-6);
             
             const reportData = {
                 action: 'report',
-                id: caseId, // 傳送 ID 給後端 (若後端有支援)
+                id: caseId, 
                 reporter: currentUser.username,
                 location: document.getElementById('report-location').value,
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                imageBase64: document.getElementById('report-img-base64').value, // Add image data
+                imageBase64: document.getElementById('report-img-base64').value,
                 note: "圖片已上傳" 
             };
             toggleLoading(true);
             
-            // Corrected: Use URLSearchParams for POST body to match GAS requirement
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                // Removed headers: { 'Content-Type': 'application/json' },
                 body: new URLSearchParams(reportData) 
             })
             .then(() => { 
                 toggleLoading(false); 
-                // 切換到成功頁面
                 document.getElementById('success-case-id').innerText = caseId;
                 switchTab('success');
                 resetReportForm();
@@ -414,11 +458,44 @@
             .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
         }
 
+        // 顯示詳細資料的函式
+        function showReportDetail(index) {
+            const item = allReportsCache[index];
+            if (!item) return;
+
+            document.getElementById('detail-id').innerText = '#' + item.id;
+            document.getElementById('detail-location').innerText = item.location;
+            document.getElementById('detail-datetime').innerText = item.date + ' ' + (item.time || '');
+            document.getElementById('detail-desc').innerText = item.desc || '無詳細描述';
+            
+            const statusEl = document.getElementById('detail-status');
+            if (item.status === '已完成') {
+                statusEl.className = 'bg-green-100 text-green-600 text-xs px-3 py-1.5 rounded-full font-bold';
+                statusEl.innerText = '已完成';
+            } else {
+                statusEl.className = 'bg-yellow-100 text-yellow-600 text-xs px-3 py-1.5 rounded-full font-bold';
+                statusEl.innerText = item.status || '處理中';
+            }
+
+            const imgEl = document.getElementById('detail-image');
+            const noImgEl = document.getElementById('detail-no-image');
+            
+            if (item.imageUrl && item.imageUrl !== 'Upload Failed' && item.imageUrl.startsWith('http')) {
+                imgEl.src = item.imageUrl;
+                imgEl.classList.remove('hidden');
+                noImgEl.classList.add('hidden');
+            } else {
+                imgEl.classList.add('hidden');
+                noImgEl.classList.remove('hidden');
+            }
+
+            switchTab('detail');
+        }
+
         function loadReports() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             toggleLoading(true);
             
-            // Added timestamp to prevent caching
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
@@ -427,17 +504,23 @@
                 list.innerHTML = '';
                 
                 if (!Array.isArray(data)) { console.error(data); return; }
+                allReportsCache = data; // 存入快取供詳細頁面使用
 
                 const filteredData = data.filter(item => 
                     (item.id && item.id.toString().toLowerCase().includes(searchTerm)) || 
                     (item.location && item.location.toLowerCase().includes(searchTerm))
                 );
+                
                 if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
+                
+                // 注意：這裡使用 data.indexOf(item) 來確保取得正確的原始索引
                 filteredData.forEach(item => {
+                    const originalIndex = data.indexOf(item);
                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
+                    
                     const html = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="clickable-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition" onclick="showReportDetail(${originalIndex})">
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
@@ -453,13 +536,11 @@
             }).catch(err => { toggleLoading(false); console.error(err); });
         }
 
-        // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
             if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
             toggleLoading(true);
             
-             // Added timestamp to prevent caching
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
@@ -468,8 +549,8 @@
                 list.innerHTML = '';
                 
                 if (!Array.isArray(data)) { console.error(data); return; }
-                
-                // 篩選本人案件 (Improved matching logic)
+                allReportsCache = data;
+
                 const myData = data.filter(item => {
                      const reporter = (item.reporter || '').toLowerCase().trim();
                      const user = (currentUser.username || '').toLowerCase().trim();
@@ -477,10 +558,12 @@
                 });
                 
                 if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
+                
                 myData.forEach(item => {
+                     const originalIndex = data.indexOf(item);
                      const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                      const html = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="clickable-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition" onclick="showReportDetail(${originalIndex})">
                         <div class="flex justify-between items-start mb-3">
                             <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
                             <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold">${item.status || '處理中'}</span>
