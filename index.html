@@ -44,10 +44,6 @@
         .img-preview-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #mobile-nav { z-index: 999; }
-        
-        /* 讓卡片有點擊感 */
-        .clickable-card { cursor: pointer; transition: all 0.2s; }
-        .clickable-card:active { transform: scale(0.98); background-color: #f8fafc; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -220,48 +216,60 @@
             </div>
         </section>
 
-        <!-- 新增：案件詳細內容頁面 -->
+        <!-- 新增：案件詳情頁 (單獨一頁) -->
         <section id="page-detail" class="page-section">
-             <div class="max-w-2xl mx-auto px-4">
-                <div class="bg-white rounded-3xl shadow-xl overflow-hidden mb-6">
-                    <!-- 頂部狀態列 -->
-                    <div class="bg-gray-50 p-6 border-b border-gray-100 flex justify-between items-center">
-                        <div class="flex items-center gap-3">
-                            <button onclick="history.back() || switchTab('status')" class="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-500 hover:text-blue-600 shadow-sm transition"><i class="fas fa-arrow-left"></i></button>
-                            <div>
-                                <h3 class="font-bold text-gray-800 text-lg">案件詳情</h3>
-                                <p class="text-xs text-gray-400" id="detail-id">#R-000000</p>
-                            </div>
+            <div class="max-w-2xl mx-auto px-4">
+                <div class="bg-white rounded-[2rem] shadow-lg p-8 relative overflow-hidden">
+                    <!-- 修正：返回按鈕直接 switchTab 到 'status' -->
+                    <div class="flex items-center mb-6">
+                        <button onclick="switchTab('status')" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center hover:bg-gray-200 transition mr-4">
+                            <i class="fas fa-arrow-left text-gray-600"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">案件詳情</h2>
+                            <p class="text-sm text-gray-400" id="detail-id">#R-000000</p>
                         </div>
-                        <span id="detail-status" class="bg-yellow-100 text-yellow-600 text-xs px-3 py-1.5 rounded-full font-bold">處理中</span>
+                        <span id="detail-status" class="ml-auto bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full font-bold text-sm">處理中</span>
                     </div>
 
-                    <!-- 內容區 -->
-                    <div class="p-6 md:p-8 space-y-6">
-                        <!-- 圖片顯示區 -->
-                        <div class="w-full bg-gray-100 rounded-2xl overflow-hidden relative group">
-                             <img id="detail-image" src="" alt="案件照片" class="w-full h-64 md:h-80 object-cover hidden">
-                             <div id="detail-no-image" class="h-40 flex items-center justify-center text-gray-400 flex-col"><i class="fas fa-image text-4xl mb-2"></i><span class="text-sm">未提供照片</span></div>
+                    <!-- 圖片區 -->
+                    <div class="bg-gray-50 rounded-2xl h-64 flex items-center justify-center mb-8 overflow-hidden relative group">
+                        <img id="detail-image" src="" class="w-full h-full object-contain hidden">
+                        <div id="detail-no-image" class="text-center text-gray-400">
+                            <i class="fas fa-image text-4xl mb-2"></i>
+                            <p>未提供照片</p>
+                        </div>
+                    </div>
+
+                    <!-- 資訊區 -->
+                    <div class="space-y-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                                <i class="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">發生地點</p>
+                                <p id="detail-location" class="text-lg font-bold text-gray-800">--</p>
+                            </div>
                         </div>
 
-                        <!-- 資訊列表 -->
-                        <div class="space-y-4">
-                             <div class="flex items-start gap-4">
-                                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0"><i class="fas fa-map-marker-alt"></i></div>
-                                <div><p class="text-xs text-gray-400 font-bold mb-0.5">發生地點</p><p class="text-gray-800 font-medium text-lg" id="detail-location">--</p></div>
-                             </div>
-                             <div class="flex items-start gap-4">
-                                <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 shrink-0"><i class="fas fa-clock"></i></div>
-                                <div><p class="text-xs text-gray-400 font-bold mb-0.5">發生時間</p><p class="text-gray-800 font-medium" id="detail-datetime">--</p></div>
-                             </div>
-                             <div class="bg-gray-50 p-5 rounded-2xl">
-                                <p class="text-xs text-gray-400 font-bold mb-2 flex items-center gap-2"><i class="fas fa-align-left"></i> 詳細描述</p>
-                                <p class="text-gray-700 leading-relaxed" id="detail-desc">--</p>
-                             </div>
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 flex-shrink-0">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400 mb-1">發生時間</p>
+                                <p id="detail-time" class="text-lg font-bold text-gray-800">--</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-6 rounded-2xl">
+                            <p class="text-sm text-gray-400 mb-2"><i class="fas fa-align-left mr-2"></i>詳細描述</p>
+                            <p id="detail-desc" class="text-gray-700 leading-relaxed">--</p>
                         </div>
                     </div>
                 </div>
-             </div>
+            </div>
         </section>
 
         <!-- 5. 個人中心 -->
@@ -298,7 +306,7 @@
 
     <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around py-2 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
         <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-home mb-1 text-lg"></i><span class="font-bold text-[10px]">首頁</span></button>
-        <button onclick="checkAuthAndSwitch('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢</span></button>
+        <button onclick="switchTab('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢</span></button>
         <button onclick="checkAuthAndSwitch('report')" class="nav-btn flex flex-col items-center w-20 -mt-6">
             <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50"><i class="fas fa-plus text-xl transform -rotate-45"></i></div>
             <span class="text-blue-600 font-bold mt-1 text-[10px]">新增通報</span>
@@ -307,10 +315,9 @@
     </nav>
 
     <script>
-        // 注意：請確保這裡是您最新的部署網址
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyMKpm4vGdtvrx2F_DXFhWNRhRn0wyt_D5liM75y25x2OxycUqt8XmtTliYaDimkOtXIA/exec'; 
         let currentUser = null;
-        let allReportsCache = []; // 用來暫存資料，方便詳細頁面讀取
+        let allReports = []; // Store fetched reports
 
         function checkAuthAndSwitch(pageId) {
             if (!currentUser) {
@@ -354,7 +361,7 @@
             }
             
             if(pageId === 'report') resetReportForm();
-            if(pageId === 'status') loadReports();
+            if(pageId === 'status') loadReports(); 
             
             if(pageId === 'profile' && currentUser) {
                 document.getElementById('profile-name').innerText = currentUser.name;
@@ -439,7 +446,7 @@
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                imageBase64: document.getElementById('report-img-base64').value,
+                imageBase64: document.getElementById('report-img-base64').value, 
                 note: "圖片已上傳" 
             };
             toggleLoading(true);
@@ -458,38 +465,32 @@
             .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
         }
 
-        // 顯示詳細資料的函式
-        function showReportDetail(index) {
-            const item = allReportsCache[index];
-            if (!item) return;
+        function formatDate(isoString) {
+            if(!isoString) return '';
+            // 處理像 2025-12-15T16:00... 這樣的長字串，只取前面 YYYY-MM-DD
+            if(isoString.includes('T')) return isoString.split('T')[0];
+            return isoString;
+        }
 
-            document.getElementById('detail-id').innerText = '#' + item.id;
-            document.getElementById('detail-location').innerText = item.location;
-            document.getElementById('detail-datetime').innerText = item.date + ' ' + (item.time || '');
-            document.getElementById('detail-desc').innerText = item.desc || '無詳細描述';
-            
-            const statusEl = document.getElementById('detail-status');
-            if (item.status === '已完成') {
-                statusEl.className = 'bg-green-100 text-green-600 text-xs px-3 py-1.5 rounded-full font-bold';
-                statusEl.innerText = '已完成';
-            } else {
-                statusEl.className = 'bg-yellow-100 text-yellow-600 text-xs px-3 py-1.5 rounded-full font-bold';
-                statusEl.innerText = item.status || '處理中';
+        function formatTime(isoString) {
+            if(!isoString) return '';
+            // 簡單檢查是否為時間格式
+            if(isoString.includes(':')) {
+                // 如果是 1899-12-29T17:24:00.000Z 這種格式
+                if(isoString.includes('T')) {
+                    const timePart = isoString.split('T')[1];
+                    return timePart.substring(0, 5); // 取 HH:mm
+                }
+                return isoString.substring(0, 5);
             }
+            return isoString;
+        }
 
-            const imgEl = document.getElementById('detail-image');
-            const noImgEl = document.getElementById('detail-no-image');
-            
-            if (item.imageUrl && item.imageUrl !== 'Upload Failed' && item.imageUrl.startsWith('http')) {
-                imgEl.src = item.imageUrl;
-                imgEl.classList.remove('hidden');
-                noImgEl.classList.add('hidden');
-            } else {
-                imgEl.classList.add('hidden');
-                noImgEl.classList.remove('hidden');
-            }
-
-            switchTab('detail');
+        // 統一顯示日期時間
+        function formatDateTimeDisplay(dateStr, timeStr) {
+            const d = formatDate(dateStr);
+            const t = formatTime(timeStr);
+            return `${d} ${t}`;
         }
 
         function loadReports() {
@@ -500,40 +501,78 @@
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
+                allReports = data; // Cache data
                 const list = document.getElementById('status-list');
                 list.innerHTML = '';
                 
                 if (!Array.isArray(data)) { console.error(data); return; }
-                allReportsCache = data; // 存入快取供詳細頁面使用
 
-                const filteredData = data.filter(item => 
-                    (item.id && item.id.toString().toLowerCase().includes(searchTerm)) || 
-                    (item.location && item.location.toLowerCase().includes(searchTerm))
-                );
-                
+                // 修正：同時篩選 ID 或 Location (地址)
+                const filteredData = data.filter(item => {
+                    const idMatch = (item.id || '').toString().toLowerCase().includes(searchTerm);
+                    const locMatch = (item.location || '').toString().toLowerCase().includes(searchTerm);
+                    return idMatch || locMatch;
+                });
+
                 if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
                 
-                // 注意：這裡使用 data.indexOf(item) 來確保取得正確的原始索引
-                filteredData.forEach(item => {
-                    const originalIndex = data.indexOf(item);
+                filteredData.forEach((item, index) => {
+                    // 使用 closure 儲存 index 方便點擊時抓取資料
                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
                     
-                    const html = `
-                    <div class="clickable-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition" onclick="showReportDetail(${originalIndex})">
+                    // 修正日期顯示
+                    const displayDate = formatDateTimeDisplay(item.date, item.time);
+
+                    const div = document.createElement('div');
+                    div.className = "bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer";
+                    div.onclick = function() { showDetail(item); }; // 點擊卡片顯示詳情
+                    
+                    div.innerHTML = `
                         <div class="flex justify-between items-start mb-3">
                             <div class="flex items-center gap-2">
                                 <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
                                 <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                             </div>
-                            <span class="text-xs text-gray-400">${item.date}</span>
+                            <span class="text-xs text-gray-400">${displayDate}</span>
                         </div>
                         <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
                         <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
-                    </div>`;
-                    list.innerHTML += html;
+                    `;
+                    list.appendChild(div);
                 });
             }).catch(err => { toggleLoading(false); console.error(err); });
+        }
+
+        // 新增：顯示詳情 Function
+        function showDetail(item) {
+            switchTab('detail'); // 切換到詳情頁
+            
+            document.getElementById('detail-id').innerText = '#' + item.id;
+            document.getElementById('detail-status').innerText = item.status || '處理中';
+            document.getElementById('detail-status').className = item.status === '已完成' 
+                ? 'ml-auto bg-green-100 text-green-700 px-4 py-1.5 rounded-full font-bold text-sm' 
+                : 'ml-auto bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full font-bold text-sm';
+
+            document.getElementById('detail-location').innerText = item.location;
+            
+            // 優化時間顯示
+            document.getElementById('detail-time').innerText = formatDateTimeDisplay(item.date, item.time);
+            document.getElementById('detail-desc').innerText = item.desc;
+
+            // 圖片處理
+            const imgEl = document.getElementById('detail-image');
+            const noImgEl = document.getElementById('detail-no-image');
+            
+            if (item.imageUrl && item.imageUrl.startsWith('http')) {
+                imgEl.src = item.imageUrl;
+                imgEl.classList.remove('hidden');
+                noImgEl.classList.add('hidden');
+            } else {
+                imgEl.src = '';
+                imgEl.classList.add('hidden');
+                noImgEl.classList.remove('hidden');
+            }
         }
 
         function loadMyReports() {
@@ -549,8 +588,7 @@
                 list.innerHTML = '';
                 
                 if (!Array.isArray(data)) { console.error(data); return; }
-                allReportsCache = data;
-
+                
                 const myData = data.filter(item => {
                      const reporter = (item.reporter || '').toLowerCase().trim();
                      const user = (currentUser.username || '').toLowerCase().trim();
@@ -558,20 +596,26 @@
                 });
                 
                 if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
-                
                 myData.forEach(item => {
-                     const originalIndex = data.indexOf(item);
                      const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
-                     const html = `
-                    <div class="clickable-card bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition" onclick="showReportDetail(${originalIndex})">
+                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
+                     // 優化時間顯示
+                     const displayDate = formatDateTimeDisplay(item.date, item.time);
+
+                     const div = document.createElement('div');
+                     div.className = "bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition cursor-pointer";
+                     div.onclick = function() { showDetail(item); }; // 點擊我的紀錄也可以看詳情
+                     
+                     div.innerHTML = `
                         <div class="flex justify-between items-start mb-3">
                             <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
-                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold">${item.status || '處理中'}</span>
+                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                         </div>
                         <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
-                        <p class="text-sm text-gray-500">${item.desc}</p>
-                    </div>`;
-                    list.innerHTML += html;
+                        <p class="text-sm text-gray-400 mb-1">${displayDate}</p>
+                        <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
+                    `;
+                    list.appendChild(div);
                 });
             }).catch(err => { toggleLoading(false); console.error(err); });
         }
