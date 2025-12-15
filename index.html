@@ -16,12 +16,18 @@
             font-family: 'Noto Sans TC', sans-serif; 
             background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
             background-attachment: fixed;
+            /* 關鍵修正：移除 min-height: 100vh 改用 h-full 配合 overflow */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        .page-section { display: none; animation: fadeIn 0.4s ease-out; flex: 1; }
+        /* 關鍵修正：確保每個分頁區塊可以正確被內容撐開 */
+        .page-section { 
+            display: none; 
+            animation: fadeIn 0.4s ease-out; 
+            width: 100%;
+        }
         .page-section.active { display: block; }
         
         @keyframes fadeIn {
@@ -30,12 +36,13 @@
         }
 
         .main-container {
-            /* 修正頂部被遮擋問題：加大 padding-top */
+            /* 關鍵修正：給予足夠的上下內距，避免被 fixed 的導覽列遮住 */
             padding-top: 100px; 
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            padding-bottom: 40px; /* 增加底部留白 */
+            padding-bottom: 100px; /* 手機版底部導覽列高度 */
+            flex: 1; /* 讓內容自動填滿剩餘空間 */
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden;
         }
 
         /* 登入頁籤 */
@@ -49,26 +56,24 @@
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
 
         /* Footer */
-        .custom-footer { background-color: #1e293b; color: #94a3b8; text-align: center; padding: 20px 0; margin-top: auto; font-size: 0.9rem; position: relative; z-index: 10; }
+        .custom-footer { 
+            background-color: #1e293b; 
+            color: #94a3b8; 
+            text-align: center; 
+            padding: 20px 0; 
+            width: 100%;
+            margin-top: auto; /* 確保 footer 永遠在最下面 */
+        }
         
-        /* 修正手機版底部按鈕文字 */
-        .nav-btn span { font-size: 10px; margin-top: 2px; }
-
         /* 圖片預覽區 */
         .img-preview-box {
-            border: 2px dashed #cbd5e1;
-            border-radius: 12px;
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            overflow: hidden;
-            background-color: #f8fafc;
-            transition: all 0.3s;
+            border: 2px dashed #cbd5e1; border-radius: 12px; height: 200px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background-color: #f8fafc; transition: all 0.3s;
         }
         .img-preview-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        /* 手機版底部導覽列 (加高層級) */
+        #mobile-nav { z-index: 999; }
     </style>
 </head>
 <body class="text-gray-800">
@@ -82,7 +87,7 @@
     </div>
 
     <!-- 電腦版導覽列 -->
-    <header id="desktop-nav" class="hidden md:flex fixed top-0 w-full bg-white/90 backdrop-blur-md shadow-sm z-50 px-8 py-4 justify-between items-center transition-all duration-300">
+    <header id="desktop-nav" class="hidden md:flex fixed top-0 w-full bg-white/95 backdrop-blur-md shadow-sm z-50 px-8 py-4 justify-between items-center transition-all duration-300">
         <div class="flex items-center gap-3">
             <div class="bg-gradient-to-r from-blue-500 to-cyan-400 text-white p-2 rounded-xl shadow-md transform rotate-3 hover:rotate-0 transition duration-300">
                 <i class="fas fa-road fa-lg"></i>
@@ -90,36 +95,40 @@
             <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">路見不平</h1>
         </div>
         <nav class="flex gap-8 text-gray-500 font-medium">
-            <a href="#" onclick="switchTab('home')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-home opacity-50"></i>首頁</a>
-            <a href="#" onclick="switchTab('report')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-bullhorn opacity-50"></i>通報</a>
-            <a href="#" onclick="switchTab('status')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-list-ul opacity-50"></i>案件列表查詢</a>
-            <a href="#" onclick="switchTab('profile')" class="hover:text-blue-600 transition flex items-center gap-2"><i class="fas fa-user opacity-50"></i>個人</a>
+            <a href="#" onclick="switchTab('home')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-home opacity-50"></i>首頁</a>
+            <a href="#" onclick="checkAuthAndSwitch('report')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-bullhorn opacity-50"></i>通報</a>
+            <a href="#" onclick="checkAuthAndSwitch('status')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-list-ul opacity-50"></i>案件列表查詢</a>
+            <a href="#" onclick="switchTab('profile')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-user opacity-50"></i>個人</a>
         </nav>
         <button onclick="logout()" class="text-sm border-2 border-red-400 text-red-500 px-5 py-1.5 rounded-full hover:bg-red-500 hover:text-white transition duration-300 font-bold">登出</button>
     </header>
 
     <!-- 主內容區 -->
-    <main class="main-container p-4">
+    <main class="main-container">
 
-        <!-- 1. 登入/註冊 -->
+        <!-- 1. 登入/註冊頁面 -->
         <section id="page-auth" class="page-section active">
-            <div class="h-full flex flex-col items-center justify-center py-10 min-h-[80vh]">
-                <div class="bg-white p-10 md:p-14 rounded-[2.5rem] card-shadow w-full max-w-2xl relative overflow-hidden mx-auto transform transition duration-500">
+            <div class="flex flex-col items-center justify-center min-h-[70vh] px-4">
+                <div class="bg-white p-8 md:p-14 rounded-[2.5rem] card-shadow w-full max-w-2xl relative overflow-hidden mx-auto transform transition duration-500 mb-10">
                     <div class="absolute top-0 left-0 w-full h-3 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400"></div>
                     <div class="text-center mb-10">
-                        <h2 class="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 mb-4 tracking-tight">路見不平通報</h2>
-                        <p class="text-gray-400 text-base md:text-lg">共同維護美好的城市道路，請先登入系統</p>
+                        <h2 class="text-3xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 mb-4 tracking-tight">路見不平通報</h2>
+                        <p class="text-gray-400 text-sm md:text-lg">共同維護美好的城市道路，請先登入系統</p>
                     </div>
                     <div class="flex border-b-2 border-gray-100 mb-8">
                         <div id="tab-login" class="auth-tab active" onclick="toggleAuthMode('login')">帳號登入</div>
                         <div id="tab-register" class="auth-tab" onclick="toggleAuthMode('register')">註冊帳號</div>
                     </div>
+                    
+                    <!-- Login Form -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-6 block animate-fade-in">
                         <div class="relative group"><i class="fas fa-user absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="text" id="login-username" placeholder="請輸入您的帳號" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-lock absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="password" id="login-password" placeholder="請輸入您的密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
                         <div class="flex justify-end mt-2"><a href="#" class="text-sm text-blue-500 hover:text-blue-700 font-medium transition">忘記密碼？</a></div>
                         <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition transform hover:-translate-y-1 mt-4">立即登入</button>
                     </form>
+
+                    <!-- Register Form -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-6 hidden animate-fade-in">
                         <div class="relative group"><i class="fas fa-envelope absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-username" placeholder="設定帳號 (Email)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-smile absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-name" placeholder="您的稱呼 (暱稱)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
@@ -130,22 +139,22 @@
             </div>
         </section>
 
-        <!-- 2. 首頁 -->
+        <!-- 2. 首頁 Dashboard -->
         <section id="page-home" class="page-section">
-            <div class="max-w-4xl mx-auto pb-10">
+            <div class="max-w-4xl mx-auto px-4">
                 <div class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl p-8 text-white mb-8 shadow-xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-10 -mt-10"></div>
                     <div class="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-10 rounded-full -ml-5 -mb-5"></div>
                     <h2 class="text-3xl font-bold mb-2">早安，<span id="display-name">訪客</span> 👋</h2>
                     <p class="opacity-90 text-lg">今天發現了什麼需要改善的地方嗎？</p>
                 </div>
-                <div class="grid grid-cols-2 gap-6 mb-8">
-                    <button onclick="switchTab('report')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-blue-100">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <button onclick="checkAuthAndSwitch('report')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-blue-100">
                         <div class="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-500 group-hover:text-white transition duration-300"><i class="fas fa-plus text-2xl"></i></div>
                         <span class="font-bold text-lg text-gray-700 group-hover:text-blue-600">通報事件</span>
                         <p class="text-xs text-gray-400 mt-2">發現坑洞、路燈故障</p>
                     </button>
-                    <button onclick="switchTab('status')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-purple-100">
+                    <button onclick="checkAuthAndSwitch('status')" class="bg-white p-6 rounded-2xl card-shadow hover:shadow-xl transition transform hover:-translate-y-1 group border border-transparent hover:border-purple-100">
                         <div class="w-16 h-16 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-500 group-hover:text-white transition duration-300"><i class="fas fa-search text-2xl"></i></div>
                         <span class="font-bold text-lg text-gray-700 group-hover:text-purple-600">查看進度</span>
                         <p class="text-xs text-gray-400 mt-2">追蹤案件處理狀態</p>
@@ -154,9 +163,9 @@
             </div>
         </section>
 
-        <!-- 3. 事件通報 (新增圖片上傳) -->
+        <!-- 3. 事件通報 -->
         <section id="page-report" class="page-section">
-            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden mb-10 border border-gray-100">
+            <div class="max-w-2xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 mx-4">
                 <div class="p-6 bg-gradient-to-r from-blue-50 to-white border-b border-gray-100">
                     <h2 class="text-xl font-bold text-blue-800 flex items-center justify-center"><span class="bg-blue-100 p-2 rounded-lg mr-2"><i class="fas fa-edit text-blue-600"></i></span>填寫通報資料</h2>
                 </div>
@@ -168,18 +177,13 @@
                     </div>
                     <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📝 詳細描述</label><textarea id="report-desc" rows="4" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition" placeholder="請詳細描述問題狀況..."></textarea></div>
                     
-                    <!-- 新增：真正的圖片上傳功能 -->
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📷 現場照片</label>
                         <div class="img-preview-box" onclick="document.getElementById('report-file').click()">
-                            <div id="upload-placeholder" class="text-center text-gray-400">
-                                <i class="fas fa-cloud-upload-alt text-4xl mb-2"></i>
-                                <p>點擊選擇照片 (相簿/拍照)</p>
-                            </div>
+                            <div id="upload-placeholder" class="text-center text-gray-400"><i class="fas fa-cloud-upload-alt text-4xl mb-2"></i><p>點擊選擇照片 (相簿/拍照)</p></div>
                             <img id="img-preview" src="" alt="預覽" class="hidden h-full">
                         </div>
                         <input type="file" id="report-file" class="hidden" accept="image/*" onchange="previewImage(this)">
-                        <!-- 隱藏欄位：儲存 Base64 用 -->
                         <input type="hidden" id="report-img-base64">
                     </div>
 
@@ -191,23 +195,18 @@
             </div>
         </section>
 
-        <!-- 4. 案件進度查詢 (新增搜尋欄) -->
+        <!-- 4. 案件列表查詢 -->
         <section id="page-status" class="page-section">
-            <div class="max-w-2xl mx-auto mb-10">
+            <div class="max-w-2xl mx-auto px-4">
                 <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
                     <h2 class="font-bold text-xl text-gray-800 mb-4 text-center">案件列表查詢</h2>
-                    
-                    <!-- 新增：搜尋工具列 -->
                     <div class="flex gap-2 mb-6">
                         <div class="relative flex-1">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                             <input type="text" id="search-input" placeholder="輸入案件編號或地址..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none">
                         </div>
-                        <button onclick="loadReports()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition">
-                            查詢
-                        </button>
+                        <button onclick="loadReports()" class="bg-blue-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-blue-700 transition">查詢</button>
                     </div>
-
                     <div id="status-list" class="space-y-4">
                         <div class="text-center py-12"><div class="text-gray-300 text-6xl mb-4"><i class="fas fa-inbox"></i></div><p class="text-gray-400">目前沒有資料，或請輸入關鍵字查詢</p></div>
                     </div>
@@ -217,7 +216,7 @@
 
         <!-- 5. 個人中心 -->
         <section id="page-profile" class="page-section">
-            <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl mt-8 p-8 relative overflow-hidden mb-10">
+            <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl mt-8 p-8 relative overflow-hidden mx-4">
                 <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-400 to-purple-500"></div>
                 <div class="relative text-center mt-4">
                     <div class="w-24 h-24 bg-white p-1 rounded-full mx-auto shadow-lg"><div class="w-full h-full bg-gray-100 rounded-full flex items-center justify-center text-4xl text-gray-400 overflow-hidden"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" class="w-full h-full"></div></div>
@@ -236,32 +235,40 @@
             </div>
         </section>
 
-        <!-- Footer -->
-        <footer class="custom-footer">
-            <p>&copy; 「路見不平」通報處理系統</p>
-        </footer>
-
     </main>
 
+    <!-- Footer -->
+    <footer class="custom-footer">
+        <p>&copy; 「路見不平」通報處理系統</p>
+    </footer>
+
     <!-- 手機版底部導覽列 -->
-    <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/90 backdrop-blur-md border-t border-gray-200 flex justify-around py-2 z-50 pb-safe">
-        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-home mb-1 text-lg"></i><span class="font-bold">首頁</span></button>
-        <button onclick="switchTab('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold">案件列表查詢</span></button>
-        
-        <!-- 新增文字的懸浮按鈕 -->
-        <button onclick="switchTab('report')" class="nav-btn flex flex-col items-center w-20 -mt-6">
-            <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50">
-                <i class="fas fa-plus text-xl transform -rotate-45"></i>
-            </div>
+    <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around py-2 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-home mb-1 text-lg"></i><span class="font-bold text-[10px]">首頁</span></button>
+        <button onclick="checkAuthAndSwitch('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢</span></button>
+        <button onclick="checkAuthAndSwitch('report')" class="nav-btn flex flex-col items-center w-20 -mt-6">
+            <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50"><i class="fas fa-plus text-xl transform -rotate-45"></i></div>
             <span class="text-blue-600 font-bold mt-1 text-[10px]">新增通報</span>
         </button>
-        
-        <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold">個人</span></button>
+        <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold text-[10px]">個人</span></button>
     </nav>
 
     <script>
         const GOOGLE_SCRIPT_URL = '您的_APPS_SCRIPT_網址_請貼在這裡'; 
         let currentUser = null;
+
+        // 檢查權限的切換頁面功能 (關鍵)
+        function checkAuthAndSwitch(pageId) {
+            if (!currentUser) {
+                alert('請先登入才能使用此功能！');
+                // 強制導回首頁或登入頁
+                switchTab('auth');
+                // 自動切換到登入 Tab
+                toggleAuthMode('login');
+                return;
+            }
+            switchTab(pageId);
+        }
 
         function toggleAuthMode(mode) {
             const loginForm = document.getElementById('form-login');
@@ -311,7 +318,6 @@
             document.getElementById('report-img-base64').value = '';
         }
 
-        // 圖片預覽處理
         function previewImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -319,7 +325,6 @@
                     document.getElementById('img-preview').src = e.target.result;
                     document.getElementById('img-preview').classList.remove('hidden');
                     document.getElementById('upload-placeholder').classList.add('hidden');
-                    // 將 Base64 字串存入隱藏欄位 (如果後端支援接收，可使用此值)
                     document.getElementById('report-img-base64').value = e.target.result;
                 }
                 reader.readAsDataURL(input.files[0]);
@@ -355,7 +360,6 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             if(!GOOGLE_SCRIPT_URL.startsWith('http')) { alert('請先設定 Google Apps Script 網址！'); return; }
-
             const reportData = {
                 action: 'report',
                 reporter: currentUser.username,
@@ -363,10 +367,8 @@
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                // 這裡傳送 Base64 圖片資料 (注意：Google Sheet 有儲存格字數限制，大圖可能會失敗，建議後端做處理或僅存小圖)
                 note: "圖片已上傳" 
             };
-
             toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reportData) })
             .then(() => { toggleLoading(false); alert('✅ 通報成功！感謝您的協助。'); resetReportForm(); switchTab('home'); })
@@ -383,15 +385,11 @@
                 toggleLoading(false);
                 const list = document.getElementById('status-list');
                 list.innerHTML = '';
-                
-                // 篩選邏輯
                 const filteredData = data.filter(item => 
                     item.id.toString().toLowerCase().includes(searchTerm) || 
                     item.location.toLowerCase().includes(searchTerm)
                 );
-
                 if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
-                
                 filteredData.forEach(item => {
                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
