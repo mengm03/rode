@@ -312,7 +312,7 @@
                 document.getElementById('profile-account').innerText = currentUser.username;
                 document.getElementById('profile-status').className = 'bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold';
                 document.getElementById('profile-status').innerText = '已認證會員';
-                document.getElementById('profile-avatar').src = `https://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec=${currentUser.username}`;
+                document.getElementById('profile-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`;
             }
 
             window.scrollTo(0,0);
@@ -368,39 +368,12 @@
 
         function handleLogin(e) {
             e.preventDefault();
-            toggleLoading(true);
             const username = document.getElementById('login-username').value;
-            const password = document.getElementById('login-password').value;
-            
-            // 模擬登入，先在前端設定使用者資訊
-            // 這裡我們假設使用者輸入的帳號是有效的
-            // 我們從註冊表單中獲取名稱，如果為空，則從 email 生成
-            const name = document.getElementById('reg-name').value || username.split('@')[0];
-            currentUser = { username: username, name: name };
-
-            const data = { action: 'login', username: username, password: password };
-
-            // 向後端發送登入紀錄，但不等待回應
-            fetch(GOOGLE_SCRIPT_URL, { 
-                method: 'POST', 
-                mode: 'no-cors',
-                body: new URLSearchParams(data) 
-            })
-            .then(() => {
-                // 不論後端結果如何，都讓使用者登入
-                toggleLoading(false);
-                document.getElementById('display-name').innerText = currentUser.name;
-                alert('登入成功！');
-                switchTab('home');
-            })
-            .catch(err => {
-                // 如果連網路都沒有，還是提示錯誤，但仍然讓使用者登入
-                toggleLoading(false);
-                console.error('Login record failed:', err);
-                document.getElementById('display-name').innerText = currentUser.name;
-                alert('登入成功！(但無法記錄登入資訊)');
-                switchTab('home');
-            });
+            // 模擬登入：直接在前端設定使用者資訊
+            currentUser = { username: username, name: username.split('@')[0] };
+            document.getElementById('display-name').innerText = currentUser.name;
+            alert('登入成功！');
+            switchTab('home');
         }
 
         function logout() { 
@@ -409,7 +382,7 @@
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
-            document.getElementById('profile-avatar').src = 'httpshttps://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec://api.dicebear.com/7.x/avataaars/svg?seed=guest';
+            document.getElementById('profile-avatar').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest';
             toggleAuthMode('login'); 
             switchTab('auth'); 
         }
@@ -438,7 +411,7 @@
                 toggleLoading(false); 
                 const tempCaseId = 'R-' + Date.now().toString().slice(-6);
                 document.getElementById('success-case-id').innerText = tempCaseId;
-                alert('通報請求已送出！');
+                alert('通報請求已送出！後端將進行處理。');
                 switchTab('success');
                 resetReportForm();
             })
@@ -494,9 +467,19 @@
                 const list = document.getElementById('my-reports-list');
                 list.innerHTML = '';
                 
-                const myData = data.filter(item => item.reporter === currentUser.username);
+                // --- 修正篩選邏輯 ---
+                const myData = data.filter(item => {
+                    // 確保 item.reporter 和 currentUser.username 都存在
+                    const reporter = item.reporter || '';
+                    const user = currentUser.username || '';
+                    // 轉換為小寫並去除頭尾空格後再比對
+                    return reporter.toLowerCase().trim() === user.toLowerCase().trim();
+                });
                 
-                if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
+                if(!myData || myData.length === 0) { 
+                    list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; 
+                    return; 
+                }
                 myData.forEach(item => {
                      const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                      const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
@@ -511,7 +494,12 @@
                     </div>`;
                     list.innerHTML += html;
                 });
-            }).catch(err => { toggleLoading(false); console.error(err); });
+            }).catch(err => { 
+                toggleLoading(false);
+                const list = document.getElementById('my-reports-list');
+                list.innerHTML = '<div class="text-center py-10 text-gray-400">讀取資料時發生錯誤，請稍後再試。</div>';
+                console.error("Error loading my reports: ", err);
+            });
         }
 
         switchTab('auth');
