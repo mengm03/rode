@@ -304,9 +304,10 @@
             }
             
             if(pageId === 'report') resetReportForm();
-            if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) loadReports();
+            if(pageId === 'status') loadReports();
             
             if(pageId === 'profile' && currentUser) {
+                document.getElementById('display-name').innerText = currentUser.name;
                 document.getElementById('profile-name').innerText = currentUser.name;
                 document.getElementById('profile-account').innerText = currentUser.username;
                 document.getElementById('profile-status').className = 'bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold';
@@ -348,21 +349,45 @@
             e.preventDefault();
             toggleLoading(true);
             const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-            .then(() => { toggleLoading(false); alert('註冊請求已送出！請嘗試登入。'); toggleAuthMode('login'); })
+            
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(data) })
+            .then(res => res.json())
+            .then(response => {
+                toggleLoading(false);
+                if (response.success) {
+                    alert('註冊成功！請使用您的新帳號登入。');
+                    toggleAuthMode('login');
+                } else {
+                    alert('註冊失敗：' + (response.message || '未知錯誤'));
+                }
+            })
             .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
         }
 
         function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('login-username').value;
-            currentUser = { username: username, name: username.split('@')[0] }; 
-            document.getElementById('display-name').innerText = currentUser.name;
-            alert('登入成功！'); switchTab('home');
+            toggleLoading(true);
+            const data = { action: 'login', username: document.getElementById('login-username').value, password: document.getElementById('login-password').value };
+
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(data) })
+            .then(res => res.json())
+            .then(response => {
+                toggleLoading(false);
+                if (response.success) {
+                    currentUser = response.user;
+                    document.getElementById('display-name').innerText = currentUser.name;
+                    alert('登入成功！');
+                    switchTab('home');
+                } else {
+                    alert('登入失敗：' + (response.message || '帳號或密碼錯誤'));
+                }
+            })
+            .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
         }
 
         function logout() { 
             currentUser = null; 
+            document.getElementById('display-name').innerText = '訪客';
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
@@ -374,27 +399,28 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
-            // 產生一個前端的案件編號
-            const caseId = 'R-' + Date.now().toString().slice(-6);
-            
             const reportData = {
                 action: 'report',
-                id: caseId, // 傳送 ID 給後端 (若後端有支援)
                 reporter: currentUser.username,
                 location: document.getElementById('report-location').value,
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
+                imageBase64: document.getElementById('report-img-base64').value,
                 note: "圖片已上傳" 
             };
             toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reportData) })
-            .then(() => { 
+            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(reportData) })
+            .then(res => res.json())
+            .then(response => { 
                 toggleLoading(false); 
-                // 切換到成功頁面
-                document.getElementById('success-case-id').innerText = caseId;
-                switchTab('success');
-                resetReportForm();
+                if (response.success) {
+                    document.getElementById('success-case-id').innerText = response.caseId;
+                    switchTab('success');
+                    resetReportForm();
+                } else {
+                    alert('通報失敗：' + (response.message || '未知錯誤'));
+                }
             })
             .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
         }
@@ -433,10 +459,13 @@
             }).catch(err => { toggleLoading(false); console.error(err); });
         }
 
-        // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
-            if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
+            if (!currentUser) { 
+                alert('請先登入');
+                switchTab('auth');
+                return;
+            }
             toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
             .then(res => res.json())
@@ -445,17 +474,17 @@
                 const list = document.getElementById('my-reports-list');
                 list.innerHTML = '';
                 
-                // 篩選本人案件
-                const myData = data.filter(item => item.reporter === currentUser.username || !item.reporter); // 若後端沒回傳 reporter 就無法篩，這邊先做個容錯
+                const myData = data.filter(item => item.reporter === currentUser.username);
                 
                 if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
                 myData.forEach(item => {
                      const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
+                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
                      const html = `
                     <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
                         <div class="flex justify-between items-start mb-3">
                             <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
-                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold">${item.status || '處理中'}</span>
+                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                         </div>
                         <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
                         <p class="text-sm text-gray-500">${item.desc}</p>
