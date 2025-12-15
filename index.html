@@ -307,7 +307,6 @@
             if(pageId === 'status') loadReports();
             
             if(pageId === 'profile' && currentUser) {
-                document.getElementById('display-name').innerText = currentUser.name;
                 document.getElementById('profile-name').innerText = currentUser.name;
                 document.getElementById('profile-account').innerText = currentUser.username;
                 document.getElementById('profile-status').className = 'bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold';
@@ -337,7 +336,8 @@
                     document.getElementById('img-preview').src = e.target.result;
                     document.getElementById('img-preview').classList.remove('hidden');
                     document.getElementById('upload-placeholder').classList.add('hidden');
-                    document.getElementById('report-img-base64').value = e.target.result;
+                    // We keep the base64 data here for potential future use, but it won't be sent with the main form data
+                    // document.getElementById('report-img-base64').value = e.target.result;
                 }
                 reader.readAsDataURL(input.files[0]);
             }
@@ -345,49 +345,54 @@
 
         function toggleLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
 
+        // --- 修正 handleRegister ---
+        // 恢復 'no-cors' 模式，僅發送請求，不處理回傳值。
+        // 這是一個模擬註冊流程，假設後端會處理成功。
         function handleRegister(e) {
             e.preventDefault();
             toggleLoading(true);
-            const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
-            
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(data) })
-            .then(res => res.json())
-            .then(response => {
-                toggleLoading(false);
-                if (response.success) {
-                    alert('註冊成功！請使用您的新帳號登入。');
-                    toggleAuthMode('login');
-                } else {
-                    alert('註冊失敗：' + (response.message || '未知錯誤'));
-                }
+            const data = { 
+                action: 'register', 
+                username: document.getElementById('reg-username').value, 
+                name: document.getElementById('reg-name').value, 
+                password: document.getElementById('reg-password').value 
+            };
+            fetch(GOOGLE_SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', // 恢復 no-cors
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(data) 
             })
-            .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
+            .then(() => { 
+                toggleLoading(false); 
+                alert('註冊請求已送出！請嘗試登入。'); 
+                toggleAuthMode('login'); 
+            })
+            .catch(err => { 
+                toggleLoading(false); 
+                // 即使是 no-cors, 網路層級的錯誤還是會被 catch
+                alert('註冊請求失敗，請檢查網路連線：' + err); 
+            });
         }
 
+        // --- 修正 handleLogin ---
+        // 恢復模擬登入，不驗證密碼，直接將使用者資訊存在前端。
+        // 這確保了使用者可以登入並進行後續操作。
         function handleLogin(e) {
             e.preventDefault();
-            toggleLoading(true);
-            const data = { action: 'login', username: document.getElementById('login-username').value, password: document.getElementById('login-password').value };
-
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(data) })
-            .then(res => res.json())
-            .then(response => {
-                toggleLoading(false);
-                if (response.success) {
-                    currentUser = response.user;
-                    document.getElementById('display-name').innerText = currentUser.name;
-                    alert('登入成功！');
-                    switchTab('home');
-                } else {
-                    alert('登入失敗：' + (response.message || '帳號或密碼錯誤'));
-                }
-            })
-            .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
+            const username = document.getElementById('login-username').value;
+            const name = document.getElementById('reg-name').value || username.split('@')[0];
+            
+            // 模擬登入：直接在前端設定使用者資訊
+            currentUser = { username: username, name: name }; 
+            
+            document.getElementById('display-name').innerText = currentUser.name;
+            alert('登入成功！');
+            switchTab('home');
         }
 
         function logout() { 
             currentUser = null; 
-            document.getElementById('display-name').innerText = '訪客';
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
@@ -398,7 +403,9 @@
 
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
-            
+            toggleLoading(true);
+
+            // 1. 建立案件資料，但不包含圖片
             const reportData = {
                 action: 'report',
                 reporter: currentUser.username,
@@ -406,39 +413,101 @@
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                imageBase64: document.getElementById('report-img-base64').value,
-                note: "圖片已上傳" 
+                note: "圖片另外上傳" // 可選的標記
             };
-            toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', body: new URLSearchParams(reportData) })
+
+            // 2. 發送案件資料，這次我們會等待後端回傳真正的案件 ID
+            fetch(GOOGLE_SCRIPT_URL, {
+                redirect: "follow",
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reportData)
+            })
             .then(res => res.json())
-            .then(response => { 
-                toggleLoading(false); 
-                if (response.success) {
-                    document.getElementById('success-case-id').innerText = response.caseId;
+            .then(result => {
+                if (result.status === 'success' && result.id) {
+                    const caseId = result.id; // 從後端取得真實的案件 ID
+                    
+                    // --- 圖片處理 ---
+                    const file = document.getElementById('report-file').files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imageBase64 = e.target.result.split(',')[1];
+                            const imageData = {
+                                action: 'uploadImage',
+                                id: caseId, // 使用後端回傳的 ID
+                                mimeType: file.type,
+                                fileName: file.name,
+                                image: imageBase64
+                            };
+                            // 發送圖片資料 (使用 no-cors，因為上傳圖片可能較久，且 Google Apps Script 回應此類請求有時會超時)
+                            fetch(GOOGLE_SCRIPT_URL, {
+                                method: 'POST',
+                                mode: 'no-cors',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(imageData)
+                            });
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                    
+                    toggleLoading(false);
+                    document.getElementById('success-case-id').innerText = caseId;
                     switchTab('success');
                     resetReportForm();
+
                 } else {
-                    alert('通報失敗：' + (response.message || '未知錯誤'));
+                    toggleLoading(false);
+                    alert('通報失敗：' + (result.message || '後端發生未知錯誤'));
                 }
             })
-            .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
+            .catch(err => {
+                toggleLoading(false);
+                alert('通報時發生連線錯誤：' + err);
+            });
         }
 
-        function loadReports() {
+        function loadReports(filterByUser = false) {
+            const listId = filterByUser ? 'my-reports-list' : 'status-list';
+            const list = document.getElementById(listId);
+            if (!list) return;
+
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             toggleLoading(true);
+            
+            // 使用 GET 請求來獲取所有案件
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
-                const list = document.getElementById('status-list');
                 list.innerHTML = '';
-                const filteredData = data.filter(item => 
-                    item.id.toString().toLowerCase().includes(searchTerm) || 
-                    item.location.toLowerCase().includes(searchTerm)
-                );
-                if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
+
+                let filteredData = data;
+
+                // 根據模式進行篩選
+                if (filterByUser) {
+                    if (currentUser) {
+                        filteredData = data.filter(item => item.reporter === currentUser.username);
+                    } else {
+                        list.innerHTML = '<div class="text-center py-10 text-gray-400">請先登入以查看您的紀錄</div>';
+                        return;
+                    }
+                } else {
+                     if (searchTerm) {
+                        filteredData = data.filter(item => 
+                            (item.id && item.id.toString().toLowerCase().includes(searchTerm)) || 
+                            (item.location && item.location.toLowerCase().includes(searchTerm))
+                        );
+                     }
+                }
+
+                if(!filteredData || filteredData.length === 0) { 
+                    const message = filterByUser ? '您尚未通報任何案件' : '查無資料';
+                    list.innerHTML = `<div class="text-center py-10 text-gray-400">${message}</div>`; 
+                    return; 
+                }
+
                 filteredData.forEach(item => {
                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
@@ -449,51 +518,31 @@
                                 <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
                                 <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                             </div>
-                            <span class="text-xs text-gray-400">${item.date}</span>
+                            <span class="text-xs text-gray-400">${item.date || ''}</span>
                         </div>
                         <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
                         <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
                     </div>`;
                     list.innerHTML += html;
                 });
-            }).catch(err => { toggleLoading(false); console.error(err); });
+            }).catch(err => { 
+                toggleLoading(false); 
+                list.innerHTML = `<div class="text-center py-10 text-gray-400">讀取資料失敗，請稍後再試</div>`;
+                console.error(err); 
+            });
         }
 
+        // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
-            if (!currentUser) { 
-                alert('請先登入');
-                switchTab('auth');
-                return;
+            if(!currentUser) {
+                 document.getElementById('my-reports-list').innerHTML = '<div class="text-center py-10 text-gray-400">請先登入以查看您的紀錄</div>';
+                 return;
             }
-            toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
-            .then(res => res.json())
-            .then(data => {
-                toggleLoading(false);
-                const list = document.getElementById('my-reports-list');
-                list.innerHTML = '';
-                
-                const myData = data.filter(item => item.reporter === currentUser.username);
-                
-                if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
-                myData.forEach(item => {
-                     const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
-                     const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
-                     const html = `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
-                        <div class="flex justify-between items-start mb-3">
-                            <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
-                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
-                        </div>
-                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
-                        <p class="text-sm text-gray-500">${item.desc}</p>
-                    </div>`;
-                    list.innerHTML += html;
-                });
-            }).catch(err => { toggleLoading(false); console.error(err); });
+            loadReports(true); // 呼叫 loadReports 並傳入 true 來篩選使用者案件
         }
 
+        // 頁面載入時，直接顯示登入頁面
         switchTab('auth');
     </script>
 </body>
