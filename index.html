@@ -304,7 +304,7 @@
             }
             
             if(pageId === 'report') resetReportForm();
-            if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) loadReports();
+            if(pageId === 'status') loadReports(); // Use default param here
             
             if(pageId === 'profile' && currentUser) {
                 document.getElementById('profile-name').innerText = currentUser.name;
@@ -348,7 +348,14 @@
             e.preventDefault();
             toggleLoading(true);
             const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+            
+            // Corrected: Use URLSearchParams for POST body to match GAS requirement
+            fetch(GOOGLE_SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                // Removed headers: { 'Content-Type': 'application/json' },
+                body: new URLSearchParams(data) 
+            })
             .then(() => { toggleLoading(false); alert('註冊請求已送出！請嘗試登入。'); toggleAuthMode('login'); })
             .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
         }
@@ -374,34 +381,32 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
-            // 產生一個前端的案件編號 (僅供顯示用，實際以 Google Sheet 為主)
+            // 產生一個前端的案件編號
             const caseId = 'R-' + Date.now().toString().slice(-6);
             
             const reportData = {
                 action: 'report',
-                id: caseId, 
+                id: caseId, // 傳送 ID 給後端 (若後端有支援)
                 reporter: currentUser.username,
                 location: document.getElementById('report-location').value,
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                imageBase64: document.getElementById('report-img-base64').value, // 確保圖片也有傳送
+                imageBase64: document.getElementById('report-img-base64').value, // Add image data
                 note: "圖片已上傳" 
             };
             toggleLoading(true);
             
-            // --- 修改重點開始 ---
+            // Corrected: Use URLSearchParams for POST body to match GAS requirement
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
                 mode: 'no-cors', 
-                // 移除 headers: { 'Content-Type': 'application/json' }, 
-                // 改用 URLSearchParams，後端才能正確讀取
+                // Removed headers: { 'Content-Type': 'application/json' },
                 body: new URLSearchParams(reportData) 
             })
-            // --- 修改重點結束 ---
-            
             .then(() => { 
                 toggleLoading(false); 
+                // 切換到成功頁面
                 document.getElementById('success-case-id').innerText = caseId;
                 switchTab('success');
                 resetReportForm();
@@ -413,17 +418,14 @@
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             toggleLoading(true);
             
-            // --- 修改重點：加入 &_t=${new Date().getTime()} 防止快取 ---
+            // Added timestamp to prevent caching
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
-            // --------------------------------------------------------
-            
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
                 const list = document.getElementById('status-list');
                 list.innerHTML = '';
                 
-                // 增加錯誤檢查，避免 data 不是陣列時報錯
                 if (!Array.isArray(data)) { console.error(data); return; }
 
                 const filteredData = data.filter(item => 
@@ -451,15 +453,14 @@
             }).catch(err => { toggleLoading(false); console.error(err); });
         }
 
+        // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
             if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
             toggleLoading(true);
             
-            // --- 修改重點：加入 &_t=${new Date().getTime()} 防止快取 ---
+             // Added timestamp to prevent caching
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
-            // --------------------------------------------------------
-            
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
@@ -467,12 +468,12 @@
                 list.innerHTML = '';
                 
                 if (!Array.isArray(data)) { console.error(data); return; }
-
-                // 篩選本人案件 (增加轉小寫與去空白，提高比對成功率)
+                
+                // 篩選本人案件 (Improved matching logic)
                 const myData = data.filter(item => {
-                    const r = (item.reporter || '').toLowerCase().trim();
-                    const u = (currentUser.username || '').toLowerCase().trim();
-                    return r === u;
+                     const reporter = (item.reporter || '').toLowerCase().trim();
+                     const user = (currentUser.username || '').toLowerCase().trim();
+                     return reporter === user;
                 });
                 
                 if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
