@@ -89,16 +89,16 @@
                     </div>
                     
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-6 block animate-fade-in">
-                        <div class="relative group"><i class="fas fa-user absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="text" id="login-username" placeholder="請輸入您的帳號" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
-                        <div class="relative group"><i class="fas fa-lock absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="password" id="login-password" placeholder="請輸入您的密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
+                        <div class="relative group"><i class="fas fa-user absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="text" id="login-username" name="username" placeholder="請輸入您的帳號" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
+                        <div class="relative group"><i class="fas fa-lock absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="password" id="login-password" name="password" placeholder="請輸入您的密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
                         <div class="flex justify-end mt-2"><a href="#" class="text-sm text-blue-500 hover:text-blue-700 font-medium transition">忘記密碼？</a></div>
                         <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition transform hover:-translate-y-1 mt-4">立即登入</button>
                     </form>
 
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-6 hidden animate-fade-in">
-                        <div class="relative group"><i class="fas fa-envelope absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-username" placeholder="設定帳號 (Email)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
-                        <div class="relative group"><i class="fas fa-smile absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-name" placeholder="您的稱呼 (暱稱)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
-                        <div class="relative group"><i class="fas fa-key absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="password" id="reg-password" placeholder="設定密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
+                        <div class="relative group"><i class="fas fa-envelope absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-username" name="username" placeholder="設定帳號 (Email)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
+                        <div class="relative group"><i class="fas fa-smile absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-name" name="name" placeholder="您的稱呼 (暱稱)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
+                        <div class="relative group"><i class="fas fa-key absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="password" id="reg-password" name="password" placeholder="設定密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
                         <button type="submit" class="w-full bg-gradient-to-r from-green-400 to-teal-500 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-green-500 hover:to-teal-600 transition transform hover:-translate-y-1 mt-4">確認註冊</button>
                     </form>
                 </div>
@@ -259,7 +259,7 @@
     </nav>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macrhttps://script.google.com/macros/s/AKfycbw4MvwAaSOOXDxJ72QUjZceSyGZQqMlWOaVzpT-rpgyOWyUuRHZqLc5UZjp8-U5xsTX/execos/s/AKfycbx3HuCbrDGjjsCjfhxzjyLbcer27s057zQKmexH_AZKNeSklxbb2OzaKKIPbb0bQzRr/exec'; 
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4MvwAaSOOXDxJ72QUjZceSyGZQqMlWOaVzpT-rpgyOWyUuRHZqLc5UZjp8-U5xsTX/exec'; 
         let currentUser = null;
 
         function checkAuthAndSwitch(pageId) {
@@ -348,18 +348,22 @@
         function handleRegister(e) {
             e.preventDefault();
             toggleLoading(true);
-            const data = new FormData(e.target);
-            data.append('action', 'register');
-            
+
+            // 使用 FormData 直接從表單獲取資料
+            const formData = new FormData(e.target);
+            formData.append('action', 'register');
+
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
-                body: data,
+                body: formData,
             })
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
                 if (data.status === 'success') {
                     alert('註冊成功！請使用您的新帳號登入。');
+                    // 清空註冊表單並切換到登入
+                    e.target.reset();
                     toggleAuthMode('login');
                 } else {
                     alert('註冊失敗：' + (data.message || '未知錯誤'));
@@ -367,7 +371,8 @@
             })
             .catch(err => { 
                 toggleLoading(false); 
-                alert('註冊時發生連線錯誤：' + err); 
+                alert('註冊時發生連線錯誤：' + err.message); 
+                console.error("Registration Error:", err);
             });
         }
 
@@ -423,6 +428,7 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
+            toggleLoading(true);
             const formData = new FormData();
             formData.append('action', 'report');
             formData.append('reporter', currentUser.username);
@@ -435,18 +441,20 @@
             if (file) {
                  const reader = new FileReader();
                  reader.onload = function(e) {
+                    // 我們只需要 base64 的部分，所以移除 data URL 的頭部
                     const imageBase64 = e.target.result.split(',')[1];
                     formData.append('imageBase64', imageBase64);
+                    // 圖片讀取完成後再發送
                     sendReportData(formData);
                  }
                  reader.readAsDataURL(file);
             } else {
+                 // 沒有圖片直接發送
                  sendReportData(formData);
             }
         }
         
         function sendReportData(formData) {
-            toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL, { 
                 method: 'POST', 
                 body: formData,
@@ -465,7 +473,8 @@
             })
             .catch(err => { 
                 toggleLoading(false); 
-                alert('通報時發生連線錯誤：' + err); 
+                alert('通報時發生連線錯誤：' + err.message);
+                console.error("Report Submission Error:", err);
             });
         }
 
@@ -481,6 +490,7 @@
 
                 if (!Array.isArray(data)) {
                     list.innerHTML = '<div class="text-center py-10 text-gray-400">資料格式錯誤</div>';
+                    console.error("Received non-array data for reports:", data);
                     return;
                 }
 
@@ -499,10 +509,10 @@
                                 <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
                                 <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                             </div>
-                            <span class="text-xs text-gray-400">${item.date}</span>
+                            <span class="text-xs text-gray-400">${item.date || ''}</span>
                         </div>
-                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
-                        <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
+                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location || '地點未提供'}</h3>
+                        <p class="text-sm text-gray-500 line-clamp-2">${item.desc || '沒有描述'}</p>
                     </div>`;
                     list.innerHTML += html;
                 });
@@ -530,6 +540,7 @@
                 
                 if (!Array.isArray(data)) {
                     list.innerHTML = '<div class="text-center py-10 text-gray-400">資料格式錯誤</div>';
+                    console.error("Received non-array data for my-reports:", data);
                     return;
                 }
                 
@@ -552,8 +563,8 @@
                             <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
                             <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
                         </div>
-                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
-                        <p class="text-sm text-gray-500">${item.desc}</p>
+                        <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location || '地點未提供'}</h3>
+                        <p class="text-sm text-gray-500">${item.desc || '沒有描述'}</p>
                     </div>`;
                     list.innerHTML += html;
                 });
