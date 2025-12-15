@@ -218,7 +218,8 @@
     </nav>
 
     <script>
-        const GOOGLE_SCRIPT_URL = '您的_APPS_SCRIPT_網址_請貼在這裡'; 
+        // 您的 Google Apps Script 網址
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec'; 
         let currentUser = null;
 
         function checkAuthAndSwitch(pageId) {
@@ -265,7 +266,6 @@
             if(pageId === 'report') resetReportForm();
             if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) loadReports();
             
-            // 更新個人頁面資料 (關鍵修改)
             if(pageId === 'profile' && currentUser) {
                 document.getElementById('profile-name').innerText = currentUser.name;
                 document.getElementById('profile-account').innerText = currentUser.username;
@@ -306,7 +306,6 @@
 
         function handleRegister(e) {
             e.preventDefault();
-            if(!GOOGLE_SCRIPT_URL.startsWith('http')) { alert('請先設定 Google Apps Script 網址！'); return; }
             toggleLoading(true);
             const data = { action: 'register', username: document.getElementById('reg-username').value, name: document.getElementById('reg-name').value, password: document.getElementById('reg-password').value };
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
@@ -317,7 +316,6 @@
         function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('login-username').value;
-            // 模擬登入 (實際應驗證帳密)
             currentUser = { username: username, name: username.split('@')[0] }; 
             
             document.getElementById('display-name').innerText = currentUser.name;
@@ -327,7 +325,6 @@
 
         function logout() { 
             currentUser = null; 
-            // 重置個人頁面為未登入狀態
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
@@ -339,7 +336,6 @@
 
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
-            if(!GOOGLE_SCRIPT_URL.startsWith('http')) { alert('請先設定 Google Apps Script 網址！'); return; }
             const reportData = {
                 action: 'report',
                 reporter: currentUser.username,
@@ -356,7 +352,6 @@
         }
 
         function loadReports() {
-            if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
