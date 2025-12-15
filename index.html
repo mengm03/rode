@@ -16,18 +16,12 @@
             font-family: 'Noto Sans TC', sans-serif; 
             background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
             background-attachment: fixed;
-            /* 關鍵修正：移除 min-height: 100vh 改用 h-full 配合 overflow */
             min-height: 100vh;
             display: flex;
             flex-direction: column;
         }
 
-        /* 關鍵修正：確保每個分頁區塊可以正確被內容撐開 */
-        .page-section { 
-            display: none; 
-            animation: fadeIn 0.4s ease-out; 
-            width: 100%;
-        }
+        .page-section { display: none; animation: fadeIn 0.4s ease-out; width: 100%; }
         .page-section.active { display: block; }
         
         @keyframes fadeIn {
@@ -36,49 +30,26 @@
         }
 
         .main-container {
-            /* 關鍵修正：給予足夠的上下內距，避免被 fixed 的導覽列遮住 */
             padding-top: 100px; 
-            padding-bottom: 100px; /* 手機版底部導覽列高度 */
-            flex: 1; /* 讓內容自動填滿剩餘空間 */
+            padding-bottom: 100px;
+            flex: 1;
             width: 100%;
-            max-width: 100vw;
             overflow-x: hidden;
         }
 
-        /* 登入頁籤 */
         .auth-tab { cursor: pointer; padding: 12px 0; flex: 1; text-align: center; font-weight: bold; font-size: 1.1rem; color: #9ca3af; border-bottom: 3px solid transparent; transition: all 0.3s; }
         .auth-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-        
-        /* 卡片陰影 */
         .card-shadow { box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -15px rgba(0, 0, 0, 0.1); }
-
-        /* Loading */
         #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
-
-        /* Footer */
-        .custom-footer { 
-            background-color: #1e293b; 
-            color: #94a3b8; 
-            text-align: center; 
-            padding: 20px 0; 
-            width: 100%;
-            margin-top: auto; /* 確保 footer 永遠在最下面 */
-        }
-        
-        /* 圖片預覽區 */
-        .img-preview-box {
-            border: 2px dashed #cbd5e1; border-radius: 12px; height: 200px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background-color: #f8fafc; transition: all 0.3s;
-        }
+        .custom-footer { background-color: #1e293b; color: #94a3b8; text-align: center; padding: 20px 0; width: 100%; margin-top: auto; }
+        .img-preview-box { border: 2px dashed #cbd5e1; border-radius: 12px; height: 200px; display: flex; align-items: center; justify-content: center; cursor: pointer; overflow: hidden; background-color: #f8fafc; transition: all 0.3s; }
         .img-preview-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
         .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-
-        /* 手機版底部導覽列 (加高層級) */
         #mobile-nav { z-index: 999; }
     </style>
 </head>
 <body class="text-gray-800">
 
-    <!-- Loading -->
     <div id="loading-overlay">
         <div class="text-center">
             <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4 mx-auto"></div>
@@ -98,12 +69,11 @@
             <a href="#" onclick="switchTab('home')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-home opacity-50"></i>首頁</a>
             <a href="#" onclick="checkAuthAndSwitch('report')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-bullhorn opacity-50"></i>通報</a>
             <a href="#" onclick="checkAuthAndSwitch('status')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-list-ul opacity-50"></i>案件列表查詢</a>
-            <a href="#" onclick="switchTab('profile')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-user opacity-50"></i>個人</a>
+            <a href="#" onclick="checkAuthAndSwitch('profile')" class="hover:text-blue-600 transition flex items-center gap-2 cursor-pointer"><i class="fas fa-user opacity-50"></i>個人</a>
         </nav>
         <button onclick="logout()" class="text-sm border-2 border-red-400 text-red-500 px-5 py-1.5 rounded-full hover:bg-red-500 hover:text-white transition duration-300 font-bold">登出</button>
     </header>
 
-    <!-- 主內容區 -->
     <main class="main-container">
 
         <!-- 1. 登入/註冊頁面 -->
@@ -120,7 +90,6 @@
                         <div id="tab-register" class="auth-tab" onclick="toggleAuthMode('register')">註冊帳號</div>
                     </div>
                     
-                    <!-- Login Form -->
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-6 block animate-fade-in">
                         <div class="relative group"><i class="fas fa-user absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="text" id="login-username" placeholder="請輸入您的帳號" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-lock absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="password" id="login-password" placeholder="請輸入您的密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
@@ -128,7 +97,6 @@
                         <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition transform hover:-translate-y-1 mt-4">立即登入</button>
                     </form>
 
-                    <!-- Register Form -->
                     <form id="form-register" onsubmit="handleRegister(event)" class="space-y-6 hidden animate-fade-in">
                         <div class="relative group"><i class="fas fa-envelope absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-username" placeholder="設定帳號 (Email)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-smile absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-name" placeholder="您的稱呼 (暱稱)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
@@ -176,7 +144,6 @@
                         <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1">🕒 時間</label><input type="time" id="report-time" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition"></div>
                     </div>
                     <div><label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📝 詳細描述</label><textarea id="report-desc" rows="4" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:bg-white focus:ring-2 focus:ring-blue-200 outline-none transition" placeholder="請詳細描述問題狀況..."></textarea></div>
-                    
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-2 ml-1">📷 現場照片</label>
                         <div class="img-preview-box" onclick="document.getElementById('report-file').click()">
@@ -186,7 +153,6 @@
                         <input type="file" id="report-file" class="hidden" accept="image/*" onchange="previewImage(this)">
                         <input type="hidden" id="report-img-base64">
                     </div>
-
                 </div>
                 <div class="p-6 bg-gray-50 flex gap-4">
                     <button onclick="switchTab('home')" class="flex-1 bg-white border border-gray-300 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 transition">取消</button>
@@ -219,14 +185,14 @@
             <div class="max-w-md mx-auto bg-white rounded-3xl shadow-xl mt-8 p-8 relative overflow-hidden mx-4">
                 <div class="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-400 to-purple-500"></div>
                 <div class="relative text-center mt-4">
-                    <div class="w-24 h-24 bg-white p-1 rounded-full mx-auto shadow-lg"><div class="w-full h-full bg-gray-100 rounded-full flex items-center justify-center text-4xl text-gray-400 overflow-hidden"><img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="avatar" class="w-full h-full"></div></div>
-                    <h3 class="font-bold text-2xl mt-4 mb-1 text-gray-800" id="profile-name">小明</h3>
-                    <span class="bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold">已認證會員</span>
+                    <div class="w-24 h-24 bg-white p-1 rounded-full mx-auto shadow-lg"><div class="w-full h-full bg-gray-100 rounded-full flex items-center justify-center text-4xl text-gray-400 overflow-hidden"><img id="profile-avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=guest" alt="avatar" class="w-full h-full"></div></div>
+                    <h3 class="font-bold text-2xl mt-4 mb-1 text-gray-800" id="profile-name">未登入</h3>
+                    <span class="bg-gray-100 text-gray-500 text-xs px-3 py-1 rounded-full font-bold" id="profile-status">訪客</span>
                 </div>
                 <div class="mt-8 space-y-4">
                     <div class="bg-gray-50 p-4 rounded-xl flex items-center">
                         <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-500 shadow-sm mr-4"><i class="fas fa-envelope"></i></div>
-                        <div><p class="text-xs text-gray-400">登入帳號</p><p class="font-medium text-gray-700" id="profile-account">user123</p></div>
+                        <div><p class="text-xs text-gray-400">登入帳號</p><p class="font-medium text-gray-700" id="profile-account">--</p></div>
                     </div>
                 </div>
                 <div class="mt-8">
@@ -237,12 +203,10 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="custom-footer">
         <p>&copy; 「路見不平」通報處理系統</p>
     </footer>
 
-    <!-- 手機版底部導覽列 -->
     <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around py-2 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
         <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-home mb-1 text-lg"></i><span class="font-bold text-[10px]">首頁</span></button>
         <button onclick="checkAuthAndSwitch('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢</span></button>
@@ -250,20 +214,17 @@
             <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50"><i class="fas fa-plus text-xl transform -rotate-45"></i></div>
             <span class="text-blue-600 font-bold mt-1 text-[10px]">新增通報</span>
         </button>
-        <button onclick="switchTab('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold text-[10px]">個人</span></button>
+        <button onclick="checkAuthAndSwitch('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold text-[10px]">個人</span></button>
     </nav>
 
     <script>
         const GOOGLE_SCRIPT_URL = '您的_APPS_SCRIPT_網址_請貼在這裡'; 
         let currentUser = null;
 
-        // 檢查權限的切換頁面功能 (關鍵)
         function checkAuthAndSwitch(pageId) {
             if (!currentUser) {
                 alert('請先登入才能使用此功能！');
-                // 強制導回首頁或登入頁
                 switchTab('auth');
-                // 自動切換到登入 Tab
                 toggleAuthMode('login');
                 return;
             }
@@ -303,6 +264,16 @@
             
             if(pageId === 'report') resetReportForm();
             if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) loadReports();
+            
+            // 更新個人頁面資料 (關鍵修改)
+            if(pageId === 'profile' && currentUser) {
+                document.getElementById('profile-name').innerText = currentUser.name;
+                document.getElementById('profile-account').innerText = currentUser.username;
+                document.getElementById('profile-status').className = 'bg-green-100 text-green-600 text-xs px-3 py-1 rounded-full font-bold';
+                document.getElementById('profile-status').innerText = '已認證會員';
+                document.getElementById('profile-avatar').src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.username}`;
+            }
+
             window.scrollTo(0,0);
         }
 
@@ -346,16 +317,25 @@
         function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('login-username').value;
+            // 模擬登入 (實際應驗證帳密)
             currentUser = { username: username, name: username.split('@')[0] }; 
+            
             document.getElementById('display-name').innerText = currentUser.name;
-            document.getElementById('profile-name').innerText = currentUser.name;
-            document.getElementById('profile-account').innerText = username;
-            const avatarImg = document.querySelector('#page-profile img');
-            if(avatarImg) avatarImg.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`;
+            
             alert('登入成功！'); switchTab('home');
         }
 
-        function logout() { currentUser = null; toggleAuthMode('login'); switchTab('auth'); }
+        function logout() { 
+            currentUser = null; 
+            // 重置個人頁面為未登入狀態
+            document.getElementById('profile-name').innerText = '未登入';
+            document.getElementById('profile-account').innerText = '--';
+            document.getElementById('profile-status').innerText = '訪客';
+            document.getElementById('profile-avatar').src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=guest';
+            
+            toggleAuthMode('login'); 
+            switchTab('auth'); 
+        }
 
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
