@@ -195,8 +195,66 @@
                         <div><p class="text-xs text-gray-400">登入帳號</p><p class="font-medium text-gray-700" id="profile-account">--</p></div>
                     </div>
                 </div>
-                <div class="mt-8">
+                <div class="mt-8 space-y-3">
+                    <button onclick="switchTab('history')" class="w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition flex items-center justify-center gap-2">
+                        <i class="fas fa-history"></i>查看通報紀錄
+                    </button>
                     <button onclick="logout()" class="w-full border-2 border-red-100 text-red-400 py-3 rounded-xl font-bold hover:bg-red-50 hover:text-red-500 transition">登出帳號</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. 通報成功頁面 -->
+        <section id="page-success" class="page-section">
+            <div class="max-w-2xl mx-auto px-4">
+                <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                    <div class="p-8 text-center">
+                        <div class="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce">
+                            <i class="fas fa-check-circle text-green-500 text-5xl"></i>
+                        </div>
+                        <h2 class="text-3xl font-bold text-gray-800 mb-2">通報成功！</h2>
+                        <p class="text-gray-500 mb-8">感謝您的協助，讓我們一起讓城市變得更好</p>
+                        
+                        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 mb-6">
+                            <p class="text-sm text-gray-600 mb-2">您的案件編號</p>
+                            <div class="flex items-center justify-center gap-2">
+                                <span class="text-4xl font-bold text-blue-600" id="success-case-number">#12345</span>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3">請保存此編號以便追蹤案件進度</p>
+                        </div>
+
+                        <div class="space-y-3">
+                            <button onclick="switchTab('status')" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition">
+                                <i class="fas fa-search mr-2"></i>查看所有案件
+                            </button>
+                            <button onclick="switchTab('history')" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition">
+                                <i class="fas fa-history mr-2"></i>查看我的通報紀錄
+                            </button>
+                            <button onclick="switchTab('home')" class="w-full border-2 border-gray-200 text-gray-600 py-3 rounded-xl font-bold hover:bg-gray-50 transition">
+                                返回首頁
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. 我的通報紀錄 -->
+        <section id="page-history" class="page-section">
+            <div class="max-w-2xl mx-auto px-4">
+                <div class="bg-white rounded-2xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="font-bold text-xl text-gray-800">我的通報紀錄</h2>
+                        <button onclick="switchTab('profile')" class="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                            <i class="fas fa-arrow-left mr-1"></i>返回
+                        </button>
+                    </div>
+                    <div id="history-list" class="space-y-4">
+                        <div class="text-center py-12">
+                            <div class="text-gray-300 text-6xl mb-4"><i class="fas fa-clipboard-list"></i></div>
+                            <p class="text-gray-400">您還沒有通報紀錄</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -221,6 +279,7 @@
         // 您的 Google Apps Script 網址
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxBywZe2oRIHUfuVqIkKKiZVxKTMg-xf370YcFvLAwQcZ6y21VLXlUQKaOfJvoOfbA9Rg/exec'; 
         let currentUser = null;
+        let userReports = []; // 儲存使用者的通報紀錄
 
         function checkAuthAndSwitch(pageId) {
             if (!currentUser) {
@@ -265,6 +324,7 @@
             
             if(pageId === 'report') resetReportForm();
             if(pageId === 'status' && GOOGLE_SCRIPT_URL.startsWith('http')) loadReports();
+            if(pageId === 'history' && currentUser) loadUserHistory();
             
             if(pageId === 'profile' && currentUser) {
                 document.getElementById('profile-name').innerText = currentUser.name;
@@ -318,6 +378,10 @@
             const username = document.getElementById('login-username').value;
             currentUser = { username: username, name: username.split('@')[0] }; 
             
+            // 載入使用者的通報紀錄
+            const savedReports = localStorage.getItem('userReports_' + username);
+            userReports = savedReports ? JSON.parse(savedReports) : [];
+            
             document.getElementById('display-name').innerText = currentUser.name;
             
             alert('登入成功！'); switchTab('home');
@@ -325,6 +389,7 @@
 
         function logout() { 
             currentUser = null; 
+            userReports = [];
             document.getElementById('profile-name').innerText = '未登入';
             document.getElementById('profile-account').innerText = '--';
             document.getElementById('profile-status').innerText = '訪客';
@@ -336,6 +401,10 @@
 
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
+            
+            // 生成案件編號（使用時間戳）
+            const caseNumber = 'R' + Date.now().toString().slice(-8);
+            
             const reportData = {
                 action: 'report',
                 reporter: currentUser.username,
@@ -343,11 +412,33 @@
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
-                note: "圖片已上傳" 
+                note: "圖片已上傳",
+                caseNumber: caseNumber
             };
+            
+            // 儲存到本地紀錄
+            const localReport = {
+                id: caseNumber,
+                reporter: currentUser.username,
+                location: reportData.location,
+                date: reportData.date,
+                time: reportData.time,
+                desc: reportData.desc,
+                status: '處理中',
+                timestamp: Date.now()
+            };
+            userReports.push(localReport);
+            localStorage.setItem('userReports_' + currentUser.username, JSON.stringify(userReports));
+            
             toggleLoading(true);
             fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reportData) })
-            .then(() => { toggleLoading(false); alert('✅ 通報成功！感謝您的協助。'); resetReportForm(); switchTab('home'); })
+            .then(() => { 
+                toggleLoading(false); 
+                // 顯示案件編號在成功頁面
+                document.getElementById('success-case-number').innerText = '#' + caseNumber;
+                resetReportForm(); 
+                switchTab('success'); 
+            })
             .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
         }
 
@@ -383,6 +474,78 @@
                     list.innerHTML += html;
                 });
             }).catch(err => { toggleLoading(false); console.error(err); });
+        }
+
+        function loadUserHistory() {
+            if (!currentUser) { 
+                switchTab('auth'); 
+                return; 
+            }
+            
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            // 先嘗試從 API 載入資料並過濾
+            if (GOOGLE_SCRIPT_URL.startsWith('http')) {
+                toggleLoading(true);
+                fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
+                .then(res => res.json())
+                .then(data => {
+                    toggleLoading(false);
+                    // 過濾出當前使用者的通報
+                    const userReportsList = data.filter(item => item.reporter === currentUser.username);
+                    displayUserReports(userReportsList);
+                })
+                .catch(err => {
+                    toggleLoading(false);
+                    console.error(err);
+                    // 如果 API 失敗，使用本地儲存的資料
+                    displayUserReports(userReports);
+                });
+            } else {
+                // 如果沒有設定 API，直接使用本地資料
+                displayUserReports(userReports);
+            }
+        }
+
+        function displayUserReports(reports) {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+            
+            if (!reports || reports.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-gray-300 text-6xl mb-4"><i class="fas fa-clipboard-list"></i></div>
+                        <p class="text-gray-400">您還沒有通報紀錄</p>
+                    </div>`;
+                return;
+            }
+            
+            // 依時間排序（最新的在前）
+            reports.sort((a, b) => {
+                const timeA = a.timestamp || 0;
+                const timeB = b.timestamp || 0;
+                return timeB - timeA;
+            });
+            
+            reports.forEach(item => {
+                const statusClass = item.status === '已完成' ? 'bg-green-100 text-green-600' : 'bg-yellow-100 text-yellow-600';
+                const icon = item.status === '已完成' ? 'fa-check-circle' : 'fa-clock';
+                const html = `
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="bg-blue-50 text-blue-500 font-bold px-2 py-1 rounded text-xs">#${item.id}</span>
+                            <span class="${statusClass} text-xs px-2 py-1 rounded-full font-bold flex items-center gap-1"><i class="fas ${icon}"></i> ${item.status || '處理中'}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">${item.date || '未知日期'}</span>
+                    </div>
+                    <h3 class="font-bold text-gray-800 mb-1 text-lg">${item.location}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2">${item.desc}</p>
+                    ${item.time ? `<p class="text-xs text-gray-400 mt-2"><i class="fas fa-clock mr-1"></i>${item.time}</p>` : ''}
+                </div>`;
+                list.innerHTML += html;
+            });
         }
 
         switchTab('auth');
