@@ -374,24 +374,34 @@
         function submitReport() {
             if(!currentUser) { alert('請先登入'); return; }
             
-            // 產生一個前端的案件編號
+            // 產生一個前端的案件編號 (僅供顯示用，實際以 Google Sheet 為主)
             const caseId = 'R-' + Date.now().toString().slice(-6);
             
             const reportData = {
                 action: 'report',
-                id: caseId, // 傳送 ID 給後端 (若後端有支援)
+                id: caseId, 
                 reporter: currentUser.username,
                 location: document.getElementById('report-location').value,
                 date: document.getElementById('report-date').value,
                 time: document.getElementById('report-time').value,
                 desc: document.getElementById('report-desc').value,
+                imageBase64: document.getElementById('report-img-base64').value, // 確保圖片也有傳送
                 note: "圖片已上傳" 
             };
             toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(reportData) })
+            
+            // --- 修改重點開始 ---
+            fetch(GOOGLE_SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                // 移除 headers: { 'Content-Type': 'application/json' }, 
+                // 改用 URLSearchParams，後端才能正確讀取
+                body: new URLSearchParams(reportData) 
+            })
+            // --- 修改重點結束 ---
+            
             .then(() => { 
                 toggleLoading(false); 
-                // 切換到成功頁面
                 document.getElementById('success-case-id').innerText = caseId;
                 switchTab('success');
                 resetReportForm();
@@ -402,15 +412,23 @@
         function loadReports() {
             const searchTerm = document.getElementById('search-input').value.toLowerCase();
             toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
+            
+            // --- 修改重點：加入 &_t=${new Date().getTime()} 防止快取 ---
+            fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
+            // --------------------------------------------------------
+            
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
                 const list = document.getElementById('status-list');
                 list.innerHTML = '';
+                
+                // 增加錯誤檢查，避免 data 不是陣列時報錯
+                if (!Array.isArray(data)) { console.error(data); return; }
+
                 const filteredData = data.filter(item => 
-                    item.id.toString().toLowerCase().includes(searchTerm) || 
-                    item.location.toLowerCase().includes(searchTerm)
+                    (item.id && item.id.toString().toLowerCase().includes(searchTerm)) || 
+                    (item.location && item.location.toLowerCase().includes(searchTerm))
                 );
                 if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
                 filteredData.forEach(item => {
@@ -433,20 +451,29 @@
             }).catch(err => { toggleLoading(false); console.error(err); });
         }
 
-        // 新增：載入我的紀錄
         function loadMyReports() {
             switchTab('my-reports');
             if(!GOOGLE_SCRIPT_URL.startsWith('http')) return;
             toggleLoading(true);
-            fetch(GOOGLE_SCRIPT_URL + '?action=getReports')
+            
+            // --- 修改重點：加入 &_t=${new Date().getTime()} 防止快取 ---
+            fetch(GOOGLE_SCRIPT_URL + '?action=getReports&_t=' + new Date().getTime())
+            // --------------------------------------------------------
+            
             .then(res => res.json())
             .then(data => {
                 toggleLoading(false);
                 const list = document.getElementById('my-reports-list');
                 list.innerHTML = '';
                 
-                // 篩選本人案件
-                const myData = data.filter(item => item.reporter === currentUser.username || !item.reporter); // 若後端沒回傳 reporter 就無法篩，這邊先做個容錯
+                if (!Array.isArray(data)) { console.error(data); return; }
+
+                // 篩選本人案件 (增加轉小寫與去空白，提高比對成功率)
+                const myData = data.filter(item => {
+                    const r = (item.reporter || '').toLowerCase().trim();
+                    const u = (currentUser.username || '').toLowerCase().trim();
+                    return r === u;
+                });
                 
                 if(!myData || myData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">您尚未通報任何案件</div>'; return; }
                 myData.forEach(item => {
