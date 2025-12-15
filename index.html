@@ -250,12 +250,12 @@
 
     <nav id="mobile-nav" class="md:hidden fixed bottom-0 w-full bg-white/95 backdrop-blur-md border-t border-gray-200 flex justify-around py-2 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)]">
         <button onclick="switchTab('home')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-home mb-1 text-lg"></i><span class="font-bold text-[10px]">首頁</span></button>
-        <button onclick="checkAuthAndSwitch('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢</span></button>
+        <button onclick="checkAuthAndSwitch('status')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-clipboard-list mb-1 text-lg"></i><span class="font-bold text-[10px]">查詢案例</span></button>
         <button onclick="checkAuthAndSwitch('report')" class="nav-btn flex flex-col items-center w-20 -mt-6">
             <div class="bg-gradient-to-tr from-blue-500 to-indigo-500 text-white rounded-2xl w-14 h-14 flex items-center justify-center shadow-lg transform rotate-45 hover:rotate-0 transition duration-300 border-4 border-gray-50"><i class="fas fa-plus text-xl transform -rotate-45"></i></div>
             <span class="text-blue-600 font-bold mt-1 text-[10px]">新增通報</span>
         </button>
-        <button onclick="checkAuthAndSwitch('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold text-[10px]">個人</span></button>
+        <button onclick="checkAuthAndSwitch('profile')" class="nav-btn flex flex-col items-center w-16 text-gray-400 hover:text-blue-600 transition pt-2"><i class="fas fa-user mb-1 text-lg"></i><span class="font-bold text-[10px]">個人檔案</span></button>
     </nav>
 
     <script>
@@ -368,13 +368,41 @@
 
         function handleLogin(e) {
             e.preventDefault();
+            toggleLoading(true);
             const username = document.getElementById('login-username').value;
-            // 模擬登入：直接在前端設定使用者資訊
-            currentUser = { username: username, name: username.split('@')[0] };
-            document.getElementById('display-name').innerText = currentUser.name;
-            alert('登入成功！');
-            switchTab('home');
+            const password = document.getElementById('login-password').value;
+            
+            const url = new URL(GOOGLE_SCRIPT_URL);
+            url.searchParams.append('action', 'login');
+            url.searchParams.append('username', username);
+            url.searchParams.append('password', password);
+
+            fetch(url, { method: 'GET' })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('網路回應錯誤，狀態碼：' + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                toggleLoading(false);
+                if (data.success && data.user) {
+                    // 使用後端回傳的標準化資料
+                    currentUser = data.user; 
+                    document.getElementById('display-name').innerText = currentUser.name;
+                    alert('登入成功！');
+                    switchTab('home');
+                } else {
+                    alert('登入失敗：' + (data.message || '帳號或密碼錯誤。'));
+                }
+            })
+            .catch(err => {
+                toggleLoading(false);
+                alert('登入時發生錯誤：' + err.message);
+                console.error('Login error:', err);
+            });
         }
+
 
         function logout() { 
             currentUser = null; 
@@ -427,8 +455,14 @@
                 toggleLoading(false);
                 const list = document.getElementById('status-list');
                 list.innerHTML = '';
+
+                if (!Array.isArray(data)) {
+                    list.innerHTML = '<div class="text-center py-10 text-gray-400">資料格式錯誤</div>';
+                    return;
+                }
+
                 const filteredData = data.filter(item => 
-                    item.id.toString().toLowerCase().includes(searchTerm) || 
+                    (item.id && item.id.toString().toLowerCase().includes(searchTerm)) || 
                     (item.location && item.location.toLowerCase().includes(searchTerm))
                 );
                 if(!filteredData || filteredData.length === 0) { list.innerHTML = '<div class="text-center py-10 text-gray-400">查無資料</div>'; return; }
@@ -449,7 +483,11 @@
                     </div>`;
                     list.innerHTML += html;
                 });
-            }).catch(err => { toggleLoading(false); console.error(err); });
+            }).catch(err => { 
+                toggleLoading(false); 
+                document.getElementById('status-list').innerHTML = '<div class="text-center py-10 text-gray-400">讀取資料失敗</div>';
+                console.error(err);
+            });
         }
 
         function loadMyReports() {
@@ -467,13 +505,15 @@
                 const list = document.getElementById('my-reports-list');
                 list.innerHTML = '';
                 
-                // --- 修正篩選邏輯 ---
+                if (!Array.isArray(data)) {
+                    list.innerHTML = '<div class="text-center py-10 text-gray-400">資料格式錯誤</div>';
+                    return;
+                }
+                
                 const myData = data.filter(item => {
-                    // 確保 item.reporter 和 currentUser.username 都存在
-                    const reporter = item.reporter || '';
-                    const user = currentUser.username || '';
-                    // 轉換為小寫並去除頭尾空格後再比對
-                    return reporter.toLowerCase().trim() === user.toLowerCase().trim();
+                    const reporter = (item.reporter || '').toLowerCase().trim();
+                    const user = (currentUser.username || '').toLowerCase().trim();
+                    return reporter && user && reporter === user;
                 });
                 
                 if(!myData || myData.length === 0) { 
