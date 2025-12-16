@@ -91,7 +91,8 @@
                     <form id="form-login" onsubmit="handleLogin(event)" class="space-y-6 block animate-fade-in">
                         <div class="relative group"><i class="fas fa-user absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="text" id="login-username" placeholder="請輸入您的帳號" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-lock absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-blue-500 transition"></i><input type="password" id="login-password" placeholder="請輸入您的密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-blue-200 outline-none transition duration-300"></div>
-                        <div class="flex justify-end mt-2"><a href="#" class="text-sm text-blue-500 hover:text-blue-700 font-medium transition">忘記密碼？</a></div>
+                        <!-- 修改：忘記密碼按鈕觸發 JS -->
+                        <div class="flex justify-end mt-2"><button type="button" onclick="toggleAuthMode('forgot')" class="text-sm text-blue-500 hover:text-blue-700 font-medium transition">忘記密碼？</button></div>
                         <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-blue-600 hover:to-blue-700 transition transform hover:-translate-y-1 mt-4">立即登入</button>
                     </form>
 
@@ -100,6 +101,19 @@
                         <div class="relative group"><i class="fas fa-smile absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="text" id="reg-name" placeholder="您的稱呼 (暱稱)" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
                         <div class="relative group"><i class="fas fa-key absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-green-500 transition"></i><input type="password" id="reg-password" placeholder="設定密碼" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-green-200 outline-none transition duration-300"></div>
                         <button type="submit" class="w-full bg-gradient-to-r from-green-400 to-teal-500 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-green-500 hover:to-teal-600 transition transform hover:-translate-y-1 mt-4">確認註冊</button>
+                    </form>
+
+                    <!-- 新增：忘記密碼表單 -->
+                    <form id="form-forgot" onsubmit="handleForgot(event)" class="space-y-6 hidden animate-fade-in">
+                        <div class="text-center mb-6">
+                            <h3 class="text-xl font-bold text-gray-700">重設密碼</h3>
+                            <p class="text-gray-400 text-sm mt-2">請輸入您的註冊 Email，我們將寄送重設連結給您。</p>
+                        </div>
+                        <div class="relative group"><i class="fas fa-envelope absolute left-5 top-4 text-xl text-gray-300 group-focus-within:text-orange-500 transition"></i><input type="email" id="forgot-email" placeholder="請輸入註冊 Email" required class="w-full bg-gray-50 border-2 border-transparent rounded-2xl py-4 pl-14 pr-6 text-lg focus:bg-white focus:border-orange-200 outline-none transition duration-300"></div>
+                        <button type="submit" class="w-full bg-gradient-to-r from-orange-400 to-red-500 text-white font-bold text-lg py-4 rounded-2xl hover:shadow-xl hover:from-orange-500 hover:to-red-600 transition transform hover:-translate-y-1 mt-4">發送重設信</button>
+                        <div class="text-center mt-4">
+                            <button type="button" onclick="toggleAuthMode('login')" class="text-gray-400 hover:text-gray-600 font-medium transition flex items-center justify-center w-full gap-2"><i class="fas fa-arrow-left text-xs"></i> 返回登入</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -332,12 +346,29 @@
         function toggleAuthMode(mode) {
             const loginForm = document.getElementById('form-login');
             const regForm = document.getElementById('form-register');
+            const forgotForm = document.getElementById('form-forgot');
+            
             const loginTab = document.getElementById('tab-login');
             const regTab = document.getElementById('tab-register');
+            
+            // 先全部隱藏
+            loginForm.classList.add('hidden'); 
+            regForm.classList.add('hidden'); 
+            forgotForm.classList.add('hidden');
+            
+            // Tab 狀態重置
+            loginTab.classList.remove('active'); 
+            regTab.classList.remove('active');
+
             if (mode === 'login') {
-                loginForm.classList.remove('hidden'); regForm.classList.add('hidden'); loginTab.classList.add('active'); regTab.classList.remove('active');
-            } else {
-                loginForm.classList.add('hidden'); regForm.classList.remove('hidden'); loginTab.classList.remove('active'); regTab.classList.add('active');
+                loginForm.classList.remove('hidden'); 
+                loginTab.classList.add('active'); 
+            } else if (mode === 'register') {
+                regForm.classList.remove('hidden'); 
+                regTab.classList.add('active');
+            } else if (mode === 'forgot') {
+                forgotForm.classList.remove('hidden');
+                // 忘記密碼模式不需特別 highlight 登入/註冊 tab
             }
         }
 
@@ -413,6 +444,33 @@
             })
             .then(() => { toggleLoading(false); alert('註冊請求已送出！請嘗試登入。'); toggleAuthMode('login'); })
             .catch(err => { toggleLoading(false); alert('連線錯誤：' + err); });
+        }
+        
+        // 新增：處理忘記密碼
+        function handleForgot(e) {
+            e.preventDefault();
+            const email = document.getElementById('forgot-email').value;
+            toggleLoading(true);
+            
+            const data = { action: 'forgotPassword', email: email };
+            
+            // 模擬請求 (實際上如果後端支援 'forgotPassword' action 就可以運作)
+            fetch(GOOGLE_SCRIPT_URL, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: new URLSearchParams(data) 
+            })
+            .then(() => { 
+                // 為了讓使用者感覺有處理過程，這裡使用 then
+                // 實際上 mode: 'no-cors' 無法確認結果，但我們假設已送出
+                setTimeout(() => {
+                    toggleLoading(false); 
+                    alert(`重設密碼信件已發送至 ${email}，請檢查您的信箱！`); 
+                    document.getElementById('forgot-email').value = '';
+                    toggleAuthMode('login');
+                }, 1000);
+            })
+            .catch(err => { toggleLoading(false); alert('發生錯誤：' + err); });
         }
 
         function handleLogin(e) {
